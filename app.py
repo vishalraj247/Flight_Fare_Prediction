@@ -1,28 +1,8 @@
 import streamlit as st
+from src.data.data_preprocessor import DataPreprocessor
 import joblib
-import pandas as pd
 
-# Load saved preprocessing objects
-# Preprocessor.joblib is a saved ColumnTransformer object
-preprocessor = joblib.load('path_to_saved_preprocessor.joblib')
-
-# Categorical_mappings.joblib contains mappings from categories to integers
-category_mappings = joblib.load('path_to_categorical_mappings.joblib')
-
-# Define a function to preprocess user input
-def preprocess_user_input(user_input, preprocessor, category_mappings):
-    user_input_df = pd.DataFrame([user_input])
-    
-    # Convert categorical variables to integers using saved mappings
-    for col, mapping in category_mappings.items():
-        user_input_df[col] = user_input_df[col].map(mapping)
-    
-    # Apply the preprocessor
-    preprocessed_input = preprocessor.transform(user_input_df)
-    
-    return preprocessed_input
-
-# Assume user_input is a dictionary of inputs from the user via Streamlit
+# Collect user inputs via Streamlit
 user_input = {
     'startingAirport': st.text_input('Enter origin airport:'),
     'destinationAirport': st.text_input('Enter destination airport:'),
@@ -31,7 +11,20 @@ user_input = {
     'segmentsCabinCode': st.selectbox('Choose cabin type:', options=['coach', 'premium'])
 }
 
-# Preprocess the user input
-preprocessed_input = preprocess_user_input(user_input, preprocessor, category_mappings)
+# Preprocess user input
+data_preprocessor = DataPreprocessor()
+preprocessed_input = data_preprocessor.preprocess_user_input(
+    user_input,
+    'path_to_saved_preprocessor.joblib',
+    'path_to_saved_category_mappings.joblib',
+    'path_to_save_avg_features.csv'
+)
 
-# The preprocessed_input can now be used as input for our model
+# Load your trained model
+model = joblib.load('path_to_saved_model.joblib')
+
+# Use preprocessed_input for model prediction
+predicted_fare = model.predict(preprocessed_input)
+
+# Display the predicted fare
+st.write(f"The estimated fare is: ${predicted_fare[0]:.2f}")

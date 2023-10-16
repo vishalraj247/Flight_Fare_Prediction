@@ -2,23 +2,28 @@ import pandas as pd
 import os
 import zipfile
 
-def load_data(path):
-    all_data = []
-    # Iterating through each airport folder
+def load_and_save_data_by_folder(path):
     for folder in os.listdir(path):
         folder_path = os.path.join(path, folder)
+        
         if os.path.isdir(folder_path):
-            # Iterating through each zip file in the airport folder
+            concatenated_data = pd.DataFrame()
+            
             for file in os.listdir(folder_path):
                 if file.endswith(".zip"):
                     file_path = os.path.join(folder_path, file)
+                    
                     with zipfile.ZipFile(file_path, 'r') as zip_ref:
                         # Extract all files in the zip file
                         zip_ref.extractall(folder_path)
-                        # Iterating through each csv file in the extracted files
-                        for csv_file in os.listdir(folder_path):
-                            if csv_file.endswith(".csv"):
-                                csv_path = os.path.join(folder_path, csv_file)
-                                df = pd.read_csv(csv_path)
-                                all_data.append(df)
-    return pd.concat(all_data, ignore_index=True)
+                        csv_file_name = file.replace('.zip', '.csv')
+                        csv_path = os.path.join(folder_path, csv_file_name)
+                        
+                        # Concatenate CSVs
+                        data = pd.read_csv(csv_path)
+                        concatenated_data = pd.concat([concatenated_data, data], ignore_index=True)
+            
+            # Save the concatenated data to the 'interim' directory
+            interim_folder_path = os.path.join('data/interim', folder)
+            os.makedirs(interim_folder_path, exist_ok=True)
+            concatenated_data.to_csv(f"{interim_folder_path}/{folder}_concatenated.csv", index=False)
