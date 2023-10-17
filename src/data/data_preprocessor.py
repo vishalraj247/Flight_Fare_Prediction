@@ -1,8 +1,8 @@
 import pandas as pd
 import os
-import gc
 import joblib
-from sklearn.preprocessing import StandardScaler, LabelEncoder
+from collections import defaultdict
+from sklearn.preprocessing import StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -40,32 +40,27 @@ class DateFeatureExtractor(BaseEstimator, TransformerMixin):
 
 class CategoricalEncoder(BaseEstimator, TransformerMixin):
     def __init__(self, columns):
-        self.columns = columns  # Store the original columns parameter
-        self.column_indices = {col: idx for idx, col in enumerate(columns)}
-        self.encoders = {}
+        self.columns = columns
+        self.global_mappings = {}
+        for col in columns:
+            self.global_mappings[col] = defaultdict(int)
     
     def fit(self, X, y=None):
-        for col, idx in self.column_indices.items():
-            le = LabelEncoder()
-            le.fit(X[:, idx].astype(str))
-            self.encoders[col] = le
+        print("Fitting the encoder.")
+        X_df = pd.DataFrame(X, columns=self.columns)
+        for col in self.columns:
+            categories = X_df[col].unique()
+            for category in categories:
+                if category not in self.global_mappings[col]:
+                    self.global_mappings[col][category] = len(self.global_mappings[col])
         return self
     
     def transform(self, X, y=None):
-        # Making sure that the input is a DataFrame
-        X_copy = pd.DataFrame(X, columns=self.columns)
-        for col, idx in self.column_indices.items():
-            X_copy[col] = self.encoders[col].transform(X_copy[col].astype(str))
-        return X_copy
-
-    def get_params(self, deep=True):
-        # Return the original columns parameter
-        return {"columns": self.columns}
-    
-    def set_params(self, **parameters):
-        for parameter, value in parameters.items():
-            setattr(self, parameter, value)
-        return self
+        print("Transforming the data.")
+        X_df = pd.DataFrame(X, columns=self.columns)
+        for col in self.columns:
+            X_df[col] = X_df[col].map(self.global_mappings[col]).fillna(0).astype(int)
+        return X_df.values
 
 # Categorical Feature lists
 categorical_features_for_embedding = ['startingAirport', 'destinationAirport', 'segmentsCabinCode']
@@ -75,8 +70,10 @@ class DataPreprocessor:
         self.data = None
         self.preprocessor = None
         self.category_mappings = {col: {} for col in categorical_features_for_embedding}
-        self.avg_features = pd.DataFrame(columns=['startingAirport', 'destinationAirport', 'median_distance', 'median_duration', 'median_segments_distance'])
-    
+        self.avg_features = pd.DataFrame(columns=['median_distance', 'median_duration', 'median_segments_distance'])
+        # Instantiate the CategoricalEncoder here
+        self.categorical_encoder = CategoricalEncoder(columns=categorical_features_for_embedding)
+
     def split_and_explode(self, columns_to_explode):
         """
         Split and explode columns based on '||' delimiter.
@@ -116,6 +113,9 @@ class DataPreprocessor:
         ]
         self.split_and_explode(columns_to_split_and_explode)
         
+        # Store the totalFare column after split_and_explode and before applying transformations
+        totalFare_column = self.data['totalFare'].copy()
+
         # Convert segmentsDurationInSeconds and segmentsDistance to numeric
         self.data['segmentsDurationInSeconds'] = pd.to_numeric(self.data['segmentsDurationInSeconds'], errors='coerce')
         self.data['segmentsDistance'] = pd.to_numeric(self.data['segmentsDistance'], errors='coerce')
@@ -134,30 +134,30 @@ class DataPreprocessor:
         ])
         categorical_transformer_for_embedding = Pipeline(steps=[
             ('imputer', SimpleImputer(strategy='most_frequent')),
-            ('encoder', CategoricalEncoder(columns=categorical_features_for_embedding))
+            ('encoder', self.categorical_encoder)
         ])
         datetime_transformer = Pipeline(steps=[
             ('date_features', DateFeatureExtractor())
         ])
         
-        # Define the preprocessor
-        self.preprocessor = ColumnTransformer(
-            transformers=[
-                ('num', numerical_transformer, numerical_features),
-                ('cat_emb', categorical_transformer_for_embedding, categorical_features_for_embedding),
-                ('date', datetime_transformer, datetime_features)
-            ]
-        )
-        
         # Apply the preprocessor
-        transformed_data = self.preprocessor.fit_transform(self.data)
+        if self.preprocessor is None:  # Check if the preprocessor is already instantiated
+            self.preprocessor = ColumnTransformer(
+                transformers=[
+                    ('num', numerical_transformer, numerical_features),
+                    ('cat_emb', categorical_transformer_for_embedding, categorical_features_for_embedding),
+                    ('date', datetime_transformer, datetime_features)
+                ]
+            )
+            transformed_data = self.preprocessor.fit_transform(self.data)
+        else:
+            transformed_data = self.preprocessor.transform(self.data)
         
         datetime_extracted_features = [
             f"{col}_{suffix}" for col in datetime_features 
             for suffix in ['year', 'month', 'day', 'weekday', 'is_weekend'] 
             if not (col == "segmentsDepartureTimeRaw" and suffix in ['year', 'month', 'day', 'weekday', 'is_weekend'])
         ] + ["segmentsDepartureTimeRaw_hour", "segmentsDepartureTimeRaw_minute"]
-
         
         # Combine column names
         all_columns = numerical_features + categorical_features_for_embedding + datetime_extracted_features
@@ -166,6 +166,9 @@ class DataPreprocessor:
         # Check for any remaining missing values
         self.check_for_missing_values()
         
+        # After transforming the data, concatenate the totalFare column back
+        self.data['totalFare'] = totalFare_column
+
         return self.data
 
     def check_for_missing_values(self):
@@ -184,6 +187,8 @@ class DataPreprocessor:
         # Convert input dict to DataFrame
         input_df = pd.DataFrame([user_input])
         
+        # Add a dummy 'totalFare' column
+        input_df['totalFare'] = 0
         # Map categorical variables using loaded mappings
         for col, mapping in mappings.items():
             input_df[col] = input_df[col].apply(lambda x: x if x in mapping else 'unknown').map(mapping).fillna(0).astype(int)
@@ -257,10 +262,6 @@ class DataPreprocessor:
         if not os.path.exists(f'data/processed/{folder}'):
             os.makedirs(f'data/processed/{folder}')
         processed_data.to_csv(f'data/processed/{folder}/{folder}_processed.csv', index=False)
-
-        # Clear memory
-        #self.data = pd.DataFrame()
-        #gc.collect()
 
         return True  # Return True indicating processing was successful
 
