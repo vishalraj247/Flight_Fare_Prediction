@@ -3,6 +3,7 @@ import os
 import joblib
 from collections import defaultdict
 from sklearn.preprocessing import StandardScaler
+from copy import deepcopy
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
@@ -50,9 +51,11 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
         X_df = pd.DataFrame(X, columns=self.columns)
         for col in self.columns:
             categories = X_df[col].unique()
+            print(f"Unique categories in column {col}: {categories}")
             for category in categories:
                 if category not in self.global_mappings[col]:
                     self.global_mappings[col][category] = len(self.global_mappings[col])
+            print(f"Updated mappings for column {col}: {self.global_mappings[col]}")
         return self
     
     def transform(self, X, y=None):
@@ -60,6 +63,7 @@ class CategoricalEncoder(BaseEstimator, TransformerMixin):
         X_df = pd.DataFrame(X, columns=self.columns)
         for col in self.columns:
             X_df[col] = X_df[col].map(self.global_mappings[col]).fillna(0).astype(int)
+            print(f"Transformed values for column {col}: {X_df[col].unique()}")
         return X_df.values
 
 # Categorical Feature lists
@@ -74,32 +78,56 @@ class DataPreprocessor:
         # Instantiate the CategoricalEncoder here
         self.categorical_encoder = CategoricalEncoder(columns=categorical_features_for_embedding)
 
+    def merge_all_datasets(self):
+        data_frames = []
+        base_path = 'data/interim'
+        
+        for folder in os.listdir(base_path):
+            folder_path = os.path.join(base_path, folder)
+            if os.path.isdir(folder_path):
+                for file in os.listdir(folder_path):
+                    if file.endswith('.csv'):
+                        df = pd.read_csv(os.path.join(folder_path, file))
+                        data_frames.append(df)
+        
+        # Concatenate all dataframes into one
+        self.data = pd.concat(data_frames, ignore_index=True)
+
     def split_and_explode(self, columns_to_explode):
         """
         Split and explode columns based on '||' delimiter.
         
         columns_to_explode: List of column names to explode
         """
+        # Diagnostic print before explosion
+        print("Data before explosion:")
+        print(self.data.head())
         # Fill NaN values in segmentsDistance with 'None' before splitting and exploding
         if 'segmentsDistance' in columns_to_explode:
             self.data['segmentsDistance'].fillna('None', inplace=True)
 
         # Number of splits for each row across the first column
-        splits = self.data[columns_to_explode[0]].str.split(' \|\| ').apply(lambda x: len(x) if isinstance(x, list) else 0)
+        splits = self.data[columns_to_explode[0]].str.split('\|\|').apply(lambda x: len(x) if isinstance(x, list) else 0)
         
         # Ensure same number of splits across all columns
         for col in columns_to_explode[1:]:
-            col_splits = self.data[col].str.split(' \|\| ').apply(lambda x: len(x) if isinstance(x, list) else 0)
+            col_splits = self.data[col].str.split('\|\|').apply(lambda x: len(x) if isinstance(x, list) else 0)
             if not all(col_splits == splits):
                 raise ValueError(f"Columns {columns_to_explode[0]} and {col} do not have the same number of '||' splits.")
         
         # Split and explode
         for col in columns_to_explode:
-            self.data[col] = self.data[col].str.split(' \|\| ')
+            self.data[col] = self.data[col].str.split('\|\|')
         
         # Using pandas' explode simultaneously on all columns
-        self.data = self.data.apply(lambda col: col.explode())
-        
+        for col in columns_to_explode:
+            self.data = self.data.explode(col)
+
+        # Reset the index to ensure unique indices
+        self.data.reset_index(drop=True, inplace=True)
+        # Diagnostic print after explosion
+        print("Data after explosion:")
+        print(self.data.head())
         # Check if the column is the datetime column 'segmentsDepartureTimeRaw'
         if 'segmentsDepartureTimeRaw' in columns_to_explode:
             # Ensure that the exploded values are valid datetime strings
@@ -113,6 +141,9 @@ class DataPreprocessor:
         ]
         self.split_and_explode(columns_to_split_and_explode)
         
+        # Diagnostic print
+        print("Unique values in segmentsCabinCode after split and explode:")
+        print(self.data['segmentsCabinCode'].unique())
         # Store the totalFare column after split_and_explode and before applying transformations
         totalFare_column = self.data['totalFare'].copy()
 
@@ -132,6 +163,8 @@ class DataPreprocessor:
             ('imputer', SimpleImputer(strategy='median')),
             ('scaler', StandardScaler())
         ])
+        # Deepcopy the categorical encoder
+        encoder_copy = deepcopy(self.categorical_encoder)
         categorical_transformer_for_embedding = Pipeline(steps=[
             ('imputer', SimpleImputer(strategy='most_frequent')),
             ('encoder', self.categorical_encoder)
@@ -214,72 +247,48 @@ class DataPreprocessor:
         
         return preprocessed_input
 
-    def process_folder(self, folder):
-        folder_path = f'data/interim/{folder}'
+    def merge_and_preprocess_all_datasets(self):
+        """
+        Merge all datasets, preprocess the merged dataset, save the preprocessed data,
+        save category mappings, save average features, and the preprocessor.
+        """
+        # Merge datasets by reading from the airport folders in data/interim
+        data_frames = []
+        base_path = 'data/interim'
         
-        # Provided dtype_dict
-        dtype_dict = {
-            'legId': 'str',
-            'searchDate': 'str',
-            'flightDate': 'str',
-            'startingAirport': 'str',
-            'destinationAirport': 'str',
-            'travelDuration': 'str',
-            'isBasicEconomy': 'bool',
-            'isRefundable': 'bool',
-            'isNonStop': 'bool',
-            'totalFare': 'float32',
-            'totalTravelDistance': 'float32',
-            'segmentsDepartureTimeEpochSeconds': 'str',
-            'segmentsDepartureTimeRaw': 'str',
-            'segmentsArrivalTimeEpochSeconds': 'str',
-            'segmentsArrivalTimeRaw': 'str',
-            'segmentsArrivalAirportCode': 'str',
-            'segmentsDepartureAirportCode': 'str',
-            'segmentsAirlineName': 'str',
-            'segmentsAirlineCode': 'str',
-            'segmentsEquipmentDescription': 'str',
-            'segmentsDurationInSeconds': 'str',
-            'segmentsDistance': 'str',
-            'segmentsCabinCode': 'str'
-        }
+        for folder in os.listdir(base_path):
+            folder_path = os.path.join(base_path, folder)
+            if os.path.isdir(folder_path):
+                for file in os.listdir(folder_path):
+                    if file.endswith('.csv'):
+                        df = pd.read_csv(os.path.join(folder_path, file))
+                        data_frames.append(df)
         
-        # Get the first CSV file in the folder
-        csv_files = [file for file in os.listdir(folder_path) if file.endswith('.csv')]
-        if not csv_files:
-            print(f"No CSV files found in folder {folder_path}")
-            return False  # Return False if no CSV files found
-        
-        first_csv_file = csv_files[0]
-        
-        # Read the first CSV file in chunks
-        chunks = pd.read_csv(os.path.join(folder_path, first_csv_file), dtype=dtype_dict, chunksize=10000)
-        
-        concatenated_data_list = [chunk for chunk in chunks]
-        
-        self.data = pd.concat(concatenated_data_list, ignore_index=True)
+        # Concatenate all dataframes into one
+        self.data = pd.concat(data_frames, ignore_index=True)
+        # Take a random 10% sample of the merged dataset for debugging
+        #debug_fraction = 0.1
+        #self.data = self.data.sample(frac=debug_fraction).reset_index(drop=True)
+        # Preprocess the merged dataset
         processed_data = self.preprocess_data()
-        if not os.path.exists(f'data/processed/{folder}'):
-            os.makedirs(f'data/processed/{folder}')
-        processed_data.to_csv(f'data/processed/{folder}/{folder}_processed.csv', index=False)
 
-        return True  # Return True indicating processing was successful
-
-    def process_all_folders(self):
-        # Process each folder
-        for folder in os.listdir('data/interim'):
-            if os.path.isdir(f'data/interim/{folder}'):
-                processed = self.process_folder(folder)
-                if processed:  # Only update if process_folder was successful
-                    self.update_category_mappings()
-                    self.update_avg_features_lookup()
-
-        # Save category mappings, avg features, and preprocessor after processing all folders
-        self.update_category_mappings()
+        # Save the preprocessed data
+        if not os.path.exists(f'data/processed'):
+            os.makedirs(f'data/processed')
+        processed_data.to_csv(f'data/processed/merged_data_processed.csv', index=False)
+        
+        # Save category mappings
+        self.save_category_mappings()
+        joblib.dump(self.category_mappings, 'models/category_mappings.joblib')
+        
+        # Save average features
+        self.save_avg_features_lookup()
         self.avg_features.to_csv('data/processed/avg_features.csv', index=False)
+        
+        # Save the preprocessor
         joblib.dump(self.preprocessor, 'models/preprocessor.joblib')
 
-    def update_category_mappings(self):
+    def save_category_mappings(self):
         if self.data is None or self.data.empty:
             print("Warning: self.data is not initialized.")
             return
@@ -293,11 +302,8 @@ class DataPreprocessor:
         # Add an entry for unknown categories
         for col, mapping in self.category_mappings.items():
             mapping['unknown'] = 0
-            
-        # Save the category mappings for later use in prediction
-        joblib.dump(self.category_mappings, 'models/category_mappings.joblib')
 
-    def update_avg_features_lookup(self):
+    def save_avg_features_lookup(self):
         avg_features = self.data.groupby(['startingAirport', 'destinationAirport']).agg({
             'totalTravelDistance': 'median',
             'segmentsDurationInSeconds': 'median',
