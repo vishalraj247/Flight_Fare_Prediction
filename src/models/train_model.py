@@ -2,58 +2,58 @@ import os
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-from keras_tuner import HyperModel, Hyperband
+#from keras_tuner import HyperModel, Hyperband
 from tensorflow.keras import regularizers
 
-class WideDeepHyperModel(HyperModel):
-    def __init__(self, embedding_sizes):
-        self.embedding_sizes = embedding_sizes
+# class WideDeepHyperModel(HyperModel):
+#     def __init__(self, embedding_sizes):
+#         self.embedding_sizes = embedding_sizes
 
-    def build(self, hp):
-        # Wide component
-        wide_input = tf.keras.layers.Input(shape=(7,))  # 7 wide features excluding the 3 categorical features
+#     def build(self, hp):
+#         # Wide component
+#         wide_input = tf.keras.layers.Input(shape=(7,))  # 7 wide features excluding the 3 categorical features
         
-        # Embedding layers for categorical features
-        startingAirport_input = tf.keras.layers.Input(shape=(1,))
-        startingAirport_embedding = tf.keras.layers.Embedding(self.embedding_sizes['startingAirport'][0], 
-                                                            self.embedding_sizes['startingAirport'][1])(startingAirport_input)
-        startingAirport_embedding = tf.keras.layers.Flatten()(startingAirport_embedding)
+#         # Embedding layers for categorical features
+#         startingAirport_input = tf.keras.layers.Input(shape=(1,))
+#         startingAirport_embedding = tf.keras.layers.Embedding(self.embedding_sizes['startingAirport'][0], 
+#                                                             self.embedding_sizes['startingAirport'][1])(startingAirport_input)
+#         startingAirport_embedding = tf.keras.layers.Flatten()(startingAirport_embedding)
         
-        destinationAirport_input = tf.keras.layers.Input(shape=(1,))
-        destinationAirport_embedding = tf.keras.layers.Embedding(self.embedding_sizes['destinationAirport'][0], 
-                                                        self.embedding_sizes['destinationAirport'][1])(destinationAirport_input)
-        destinationAirport_embedding = tf.keras.layers.Flatten()(destinationAirport_embedding)
+#         destinationAirport_input = tf.keras.layers.Input(shape=(1,))
+#         destinationAirport_embedding = tf.keras.layers.Embedding(self.embedding_sizes['destinationAirport'][0], 
+#                                                         self.embedding_sizes['destinationAirport'][1])(destinationAirport_input)
+#         destinationAirport_embedding = tf.keras.layers.Flatten()(destinationAirport_embedding)
         
-        segmentsCabinCode_input = tf.keras.layers.Input(shape=(1,))
-        segmentsCabinCode_embedding = tf.keras.layers.Embedding(self.embedding_sizes['segmentsCabinCode'][0], 
-                                                        self.embedding_sizes['segmentsCabinCode'][1])(segmentsCabinCode_input)
-        segmentsCabinCode_embedding = tf.keras.layers.Flatten()(segmentsCabinCode_embedding)
+#         segmentsCabinCode_input = tf.keras.layers.Input(shape=(1,))
+#         segmentsCabinCode_embedding = tf.keras.layers.Embedding(self.embedding_sizes['segmentsCabinCode'][0], 
+#                                                         self.embedding_sizes['segmentsCabinCode'][1])(segmentsCabinCode_input)
+#         segmentsCabinCode_embedding = tf.keras.layers.Flatten()(segmentsCabinCode_embedding)
         
-        # Combine wide features and embeddings
-        wide_combined = tf.keras.layers.concatenate([wide_input, startingAirport_embedding, destinationAirport_embedding, segmentsCabinCode_embedding])
+#         # Combine wide features and embeddings
+#         wide_combined = tf.keras.layers.concatenate([wide_input, startingAirport_embedding, destinationAirport_embedding, segmentsCabinCode_embedding])
 
-        # Deep component with tunable parameters
-        deep_input = tf.keras.layers.Input(shape=(3,))  
-        for i in range(hp.Int('num_layers', 2, 4)):
-            if i == 0:
-                x = tf.keras.layers.Dense(units=hp.Int('units_' + str(i), 64, 256, 32),
-                                          activation='relu',
-                                          kernel_regularizer=regularizers.l2(hp.Choice('reg_rate', [0.01, 0.001, 0.0001])))(deep_input)
-            else:
-                x = tf.keras.layers.Dense(units=hp.Int('units_' + str(i), 64, 256, 32),
-                                          activation='relu',
-                                          kernel_regularizer=regularizers.l2(hp.Choice('reg_rate', [0.01, 0.001, 0.0001])))(x)
-            x = tf.keras.layers.Dropout(rate=hp.Float('dropout', 0.1, 0.5, step=0.1))(x)
+#         # Deep component with tunable parameters
+#         deep_input = tf.keras.layers.Input(shape=(3,))  
+#         for i in range(hp.Int('num_layers', 2, 4)):
+#             if i == 0:
+#                 x = tf.keras.layers.Dense(units=hp.Int('units_' + str(i), 64, 256, 32),
+#                                           activation='relu',
+#                                           kernel_regularizer=regularizers.l2(hp.Choice('reg_rate', [0.01, 0.001, 0.0001])))(deep_input)
+#             else:
+#                 x = tf.keras.layers.Dense(units=hp.Int('units_' + str(i), 64, 256, 32),
+#                                           activation='relu',
+#                                           kernel_regularizer=regularizers.l2(hp.Choice('reg_rate', [0.01, 0.001, 0.0001])))(x)
+#             x = tf.keras.layers.Dropout(rate=hp.Float('dropout', 0.1, 0.5, step=0.1))(x)
 
-        # Combine wide and deep components
-        combined = tf.keras.layers.concatenate([wide_combined, x])
+#         # Combine wide and deep components
+#         combined = tf.keras.layers.concatenate([wide_combined, x])
         
-        output_layer = tf.keras.layers.Dense(1)(combined)
+#         output_layer = tf.keras.layers.Dense(1)(combined)
 
-        model = tf.keras.models.Model(inputs=[wide_input, startingAirport_input, destinationAirport_input, segmentsCabinCode_input, deep_input], outputs=output_layer)
-        model.compile(optimizer=tf.keras.optimizers.Adam(hp.Float('learning_rate', 1e-4, 1e-2, sampling='log')), loss='mean_squared_error', metrics=['mae', 'mse'])
+#         model = tf.keras.models.Model(inputs=[wide_input, startingAirport_input, destinationAirport_input, segmentsCabinCode_input, deep_input], outputs=output_layer)
+#         model.compile(optimizer=tf.keras.optimizers.Adam(hp.Float('learning_rate', 1e-4, 1e-2, sampling='log')), loss='mean_squared_error', metrics=['mae', 'mse'])
 
-        return model
+#         return model
 
 class WideDeepModel:
     
@@ -183,26 +183,26 @@ class WideDeepModel:
 
         return rmse.result().numpy(), mae.result().numpy()
     
-    def hyperparameter_tuning(self, epochs=10):
-        hypermodel = WideDeepHyperModel(self.embedding_sizes)
+    # def hyperparameter_tuning(self, epochs=10):
+    #     hypermodel = WideDeepHyperModel(self.embedding_sizes)
 
-        tuner = Hyperband(
-            hypermodel,
-            objective='val_loss',
-            max_epochs=epochs,
-            directory='hyperparam_tuning',
-            project_name='wide_and_deep'
-        )
+    #     tuner = Hyperband(
+    #         hypermodel,
+    #         objective='val_loss',
+    #         max_epochs=epochs,
+    #         directory='hyperparam_tuning',
+    #         project_name='wide_and_deep'
+    #     )
 
-        train_data, valid_data, test_data, train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep, valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep, train_labels, valid_labels = self.model_preprocess_data()
+    #     train_data, valid_data, test_data, train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep, valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep, train_labels, valid_labels = self.model_preprocess_data()
 
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-        reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.001)
+    #     early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+    #     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.001)
         
-        tuner.search([train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep], train_labels, 
-                     validation_data=([valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep], valid_labels),
-                     epochs=epochs, 
-                     callbacks=[early_stop, reduce_lr])
+    #     tuner.search([train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep], train_labels, 
+    #                  validation_data=([valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep], valid_labels),
+    #                  epochs=epochs, 
+    #                  callbacks=[early_stop, reduce_lr])
 
-        best_model = tuner.get_best_models(num_models=1)[0]
-        self.model = best_model
+    #     best_model = tuner.get_best_models(num_models=1)[0]
+    #     self.model = best_model
