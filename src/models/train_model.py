@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-from keras_tuner import HyperModel, Hyperband
+#from keras_tuner import HyperModel, Hyperband
 #from tensorflow.keras import regularizers
 
 # class WideDeepHyperModel(HyperModel):
@@ -111,9 +111,6 @@ class WideDeepModel:
 
         self.model = tf.keras.models.Model(inputs=[wide_input, startingAirport_input, destinationAirport_input, segmentsCabinCode_input, deep_input], outputs=output_layer)
 
-    def compile_model(self):
-        self.model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae', 'mse'])
-
     def model_preprocess_data(self):
         train_data, temp_data = train_test_split(self.data, test_size=0.3, random_state=42)
         valid_data, test_data = train_test_split(temp_data, test_size=0.5, random_state=42)
@@ -147,21 +144,51 @@ class WideDeepModel:
 
         return train_data, valid_data, test_data, train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep, valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep, train_labels, valid_labels
 
-    def train_model(self, epochs=10):
-        train_data, valid_data, test_data, train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep, valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep, train_labels, valid_labels = self.model_preprocess_data()
+    def compile_model(self, warmup_steps=None):
+        initial_learning_rate = 0.01
+        
+        if warmup_steps:
+            lr_schedule = tf.keras.optimizers.schedules.PiecewiseConstantDecay(
+                boundaries=[warmup_steps],
+                values=[0.005, initial_learning_rate]
+            )
+            optimizer = tf.keras.optimizers.Adam(learning_rate=lr_schedule)
+        else:
+            optimizer = 'adam'  # Default optimizer if warmup_steps isn't provided
+            
+        self.model.compile(optimizer=optimizer, loss='mean_squared_error', metrics=['mae', 'mse'])
 
-        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-        reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=0.001)
-        model_checkpoint = tf.keras.callbacks.ModelCheckpoint("models/best_model.h5", monitor='val_loss', save_best_only=True)
+    def train_model(self, epochs=10, batch_size=32768):
+        train_data, self.valid_data, self.test_data, train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep, valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep, train_labels, valid_labels = self.model_preprocess_data()
 
-        history = self.model.fit([train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep], train_labels, 
-                                 validation_data=([valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep], valid_labels),
-                                 epochs=epochs, 
-                                 callbacks=[early_stop, reduce_lr, model_checkpoint])
+        # Determine the warmup steps using the length of train_data
+        warmup_epochs = 3
+        warmup_steps = warmup_epochs * (len(train_data) // batch_size)
+        
+        # Compile the model with the determined warmup_steps
+        self.compile_model(warmup_steps=warmup_steps)
 
-        tf.keras.models.save_model(self.model, "models/my_final_model")
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+        reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=0.005)
+        model_checkpoint = tf.keras.callbacks.ModelCheckpoint("models/best_model", save_best_only=True)
 
-    def evaluate(self, test_data):
+        history = self.model.fit(
+            [train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep], 
+            train_labels,
+            batch_size=batch_size,
+            validation_data=([valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep], valid_labels),
+            epochs=epochs, 
+            callbacks=[early_stop, reduce_lr, model_checkpoint]
+        )
+
+        return history
+
+#        tf.keras.models.save_model(self.model, "models/my_final_model")
+
+    def evaluate(self, batch_size=32768):
+
+        # Using the instance variable self.test_data
+        test_data = self.test_data
         # Split the test data into wide and deep components
         test_other_wide = test_data[['flightDate_year', 'flightDate_month', 'flightDate_day', 'flightDate_weekday', 'flightDate_is_weekend', 'segmentsDepartureTimeRaw_hour', 'segmentsDepartureTimeRaw_minute']].values.astype('float32')
         test_startingAirport = test_data['startingAirport'].values.astype('float32').reshape(-1, 1)
@@ -172,7 +199,7 @@ class WideDeepModel:
         test_labels = test_data['totalFare'].values.astype('float32')
 
         # Predictions on the test set
-        predictions = self.model.predict([test_other_wide, test_startingAirport, test_destinationAirport, test_segmentsCabinCode, test_deep])
+        predictions = self.model.predict([test_other_wide, test_startingAirport, test_destinationAirport, test_segmentsCabinCode, test_deep], batch_size=batch_size)
 
         # Calculate RMSE and MAE
         rmse = tf.keras.metrics.RootMeanSquaredError()

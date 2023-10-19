@@ -29,10 +29,10 @@ if st.button("Predict"):
 
     # Paths to all the students' models
     model_paths = [
-        "models/my_final_model.keras",
-    #    "models/student2_model.keras",
-    #    "models/student3_model.keras",
-    #    "models/student4_model.keras"
+        "models/best_model",
+    #    "models/student2_model",
+    #    "models/student3_model",
+    #    "models/student4_model"
     ]
 
     def get_temp_data():
