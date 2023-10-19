@@ -8,6 +8,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.base import BaseEstimator, TransformerMixin
+import streamlit as st
 
 class DateFeatureExtractor(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
@@ -39,44 +40,49 @@ class DateFeatureExtractor(BaseEstimator, TransformerMixin):
         self.columns_ = X.columns
         return self.fit(X).transform(X)
 
-class CategoricalEncoder(BaseEstimator, TransformerMixin):
-    def __init__(self, columns):
-        self.columns = columns
-        self.global_mappings = {}
-        for col in columns:
-            self.global_mappings[col] = defaultdict(int)
-    
-    def fit(self, X, y=None):
-        print("Fitting the encoder.")
-        X_df = pd.DataFrame(X, columns=self.columns)
-        for col in self.columns:
-            categories = X_df[col].unique()
-            print(f"Unique categories in column {col}: {categories}")
-            for category in categories:
-                if category not in self.global_mappings[col]:
-                    self.global_mappings[col][category] = len(self.global_mappings[col])
-            print(f"Updated mappings for column {col}: {self.global_mappings[col]}")
-        return self
-    
-    def transform(self, X, y=None):
-        print("Transforming the data.")
-        X_df = pd.DataFrame(X, columns=self.columns)
-        for col in self.columns:
-            X_df[col] = X_df[col].map(self.global_mappings[col]).fillna(0).astype(int)
-            print(f"Transformed values for column {col}: {X_df[col].unique()}")
-        return X_df.values
-
 # Categorical Feature lists
 categorical_features_for_embedding = ['startingAirport', 'destinationAirport', 'segmentsCabinCode']
 
 class DataPreprocessor:
     def __init__(self):
         self.data = None
+        self.category_mappings = {}
         self.preprocessor = None
-        self.category_mappings = {col: {} for col in categorical_features_for_embedding}
-        self.avg_features = pd.DataFrame(columns=['median_distance', 'median_duration', 'median_segments_distance'])
-        # Instantiate the CategoricalEncoder here
-        self.categorical_encoder = CategoricalEncoder(columns=categorical_features_for_embedding)
+        self.avg_features = pd.DataFrame()
+
+    def create_category_mappings(self):
+        """
+        Create mappings for categorical columns.
+        """
+        for col in categorical_features_for_embedding:
+            unique_values = self.data[col].dropna().unique()
+            current_mapping = {val: i+1 for i, val in enumerate(unique_values)}
+            current_mapping['unknown'] = 0  # Add an entry for unknown categories
+            self.category_mappings[col] = current_mapping
+
+    def save_category_mappings(self, path='models/category_mappings.joblib'):
+        """
+        Save the category mappings to a joblib file.
+        """
+        if not self.category_mappings:
+            print("Warning: No category mappings to save.")
+            return
+        joblib.dump(self.category_mappings, path)
+
+    def load_category_mappings(self, path='models/category_mappings.joblib'):
+        """
+        Load the category mappings from a joblib file.
+        """
+        self.category_mappings = joblib.load(path)
+
+    def encode_categorical_columns(self, df):
+        """
+        Encode the categorical columns using the saved mappings.
+        """
+        for col in categorical_features_for_embedding:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: self.category_mappings[col].get(x, self.category_mappings[col]['unknown']))
+        return df
 
     def merge_all_datasets(self):
         data_frames = []
@@ -147,6 +153,9 @@ class DataPreprocessor:
         # Store the totalFare column after split_and_explode and before applying transformations
         totalFare_column = self.data['totalFare'].copy()
 
+        # Map the categorical columns using the category mappings
+        self.data = self.encode_categorical_columns(self.data)
+
         # Convert segmentsDurationInSeconds and segmentsDistance to numeric
         self.data['segmentsDurationInSeconds'] = pd.to_numeric(self.data['segmentsDurationInSeconds'], errors='coerce')
         self.data['segmentsDistance'] = pd.to_numeric(self.data['segmentsDistance'], errors='coerce')
@@ -163,11 +172,8 @@ class DataPreprocessor:
             ('imputer', SimpleImputer(strategy='median')),
             ('scaler', StandardScaler())
         ])
-        # Deepcopy the categorical encoder
-        encoder_copy = deepcopy(self.categorical_encoder)
         categorical_transformer_for_embedding = Pipeline(steps=[
-            ('imputer', SimpleImputer(strategy='most_frequent')),
-            ('encoder', self.categorical_encoder)
+            ('imputer', SimpleImputer(strategy='most_frequent'))
         ])
         datetime_transformer = Pipeline(steps=[
             ('date_features', DateFeatureExtractor())
@@ -214,37 +220,79 @@ class DataPreprocessor:
     def preprocess_user_input(self, user_input, preprocessor_path, mappings_path, avg_features_path):
         # Load preprocessor, mappings, and avg_features
         preprocessor = joblib.load(preprocessor_path)
-        mappings = joblib.load(mappings_path)
+        self.load_category_mappings(mappings_path)
         avg_features = pd.read_csv(avg_features_path)
         
         # Convert input dict to DataFrame
         input_df = pd.DataFrame([user_input])
+        st.write("Initial Input DataFrame:", input_df)  # DEBUGGING LINE
         
         # Add a dummy 'totalFare' column
         input_df['totalFare'] = 0
+
+        # Display user's input for segmentsCabinCode before mapping
+#        st.write(f"User's input for segmentsCabinCode before mapping: {input_df['segmentsCabinCode'].values[0]}")
+#        st.write(f"User's input for startingAirport before mapping: {input_df['startingAirport'].values[0]}")
+#        st.write(f"User's input for destinationAirport before mapping: {input_df['destinationAirport'].values[0]}")
+
+        # Display the mapping loaded from the joblib file
+#        st.write(f"Loaded mappings for segmentsCabinCode: {self.category_mappings['segmentsCabinCode']}")
+#        st.write(f"Loaded mappings for startingAirport: {self.category_mappings['startingAirport']}")
+#        st.write(f"Loaded mappings for destinationAirport: {self.category_mappings['destinationAirport']}")
+
         # Map categorical variables using loaded mappings
-        for col, mapping in mappings.items():
+        for col, mapping in self.category_mappings.items():
             input_df[col] = input_df[col].apply(lambda x: x if x in mapping else 'unknown').map(mapping).fillna(0).astype(int)
+
+        # Display transformed value for segmentsCabinCode after mapping
+#        st.write(f"User's input for segmentsCabinCode after mapping: {input_df['segmentsCabinCode'].values[0]}")
+#        st.write(f"User's input for startingAirport after mapping: {input_df['startingAirport'].values[0]}")
+#        st.write(f"User's input for destinationAirport after mapping: {input_df['destinationAirport'].values[0]}")
+#        st.write("After Mapping Categorical Variables:", input_df)  # DEBUGGING LINE
         
         # Look up average features
         matching_row = avg_features[
             (avg_features['startingAirport'] == user_input['startingAirport']) & 
             (avg_features['destinationAirport'] == user_input['destinationAirport'])
         ]
-        
+
         # Add looked-up average features to input_df
         if not matching_row.empty:
-            for col in ['avg_distance', 'avg_duration', 'avg_segments_distance']:
-                input_df[col] = matching_row[col].values[0]
+            for avg_col, true_col in zip(['median_distance', 'median_duration', 'median_segments_distance'],
+                                        ['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance']):
+                input_df[true_col] = matching_row[avg_col].values[0]
         else:
             # Handle scenarios where lookup fails - use median values from the training data
-            input_df['avg_distance'] = avg_features['avg_distance'].median()
-            input_df['avg_duration'] = avg_features['avg_duration'].median()
-            input_df['avg_segments_distance'] = avg_features['avg_segments_distance'].median()
+            input_df['totalTravelDistance'] = avg_features['median_distance'].median()
+            input_df['segmentsDurationInSeconds'] = avg_features['median_duration'].median()
+            input_df['segmentsDistance'] = avg_features['median_segments_distance'].median()
         
+        st.write("After Adding Average Features:", input_df)  # DEBUGGING LINE
+
+        # Convert the time to string and concatenate with a dummy date
+        input_df['segmentsDepartureTimeRaw'] = "2000-01-01 " + input_df['segmentsDepartureTimeRaw'].astype(str)
+        input_df['segmentsDepartureTimeRaw'] = pd.to_datetime(input_df['segmentsDepartureTimeRaw'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+
+        # Get column names after transformation
+        datetime_extracted_features = [
+            f"{col}_{suffix}" for col in ['flightDate', 'segmentsDepartureTimeRaw']
+            for suffix in ['year', 'month', 'day', 'weekday', 'is_weekend']
+            if not (col == "segmentsDepartureTimeRaw" and suffix in ['year', 'month', 'day', 'weekday', 'is_weekend'])
+        ] + ["segmentsDepartureTimeRaw_hour", "segmentsDepartureTimeRaw_minute"]
+        transformed_column_names = ['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance'] + \
+                                categorical_features_for_embedding + datetime_extracted_features
+
         # Apply preprocessor
-        preprocessed_input = pd.DataFrame(preprocessor.transform(input_df))
-        
+        preprocessed_input = pd.DataFrame(preprocessor.transform(input_df), columns=transformed_column_names)
+        preprocessed_input = preprocessed_input.astype('float32')
+
+        # Overwrite average features
+        preprocessed_input.columns = ['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance'] + list(preprocessed_input.columns[3:])
+        for col in ['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance']:
+            preprocessed_input[col] = input_df[col]
+
+        st.write("Final Preprocessed Input:", preprocessed_input)  # DEBUGGING LINE
+
         return preprocessed_input
 
     def merge_and_preprocess_all_datasets(self):
@@ -266,10 +314,15 @@ class DataPreprocessor:
         
         # Concatenate all dataframes into one
         self.data = pd.concat(data_frames, ignore_index=True)
-        # Take a random 10% sample of the merged dataset for debugging
-        #debug_fraction = 0.1
-        #self.data = self.data.sample(frac=debug_fraction).reset_index(drop=True)
-        # Preprocess the merged dataset
+        # Take a random 5% sample of the merged dataset for debugging
+        debug_fraction = 0.05
+        self.data = self.data.sample(frac=debug_fraction).reset_index(drop=True)
+
+        # Create the category mappings after merging all datasets
+        self.create_category_mappings()
+        self.save_category_mappings()
+
+        # Preprocess the merged dataset using the created mappings
         processed_data = self.preprocess_data()
 
         # Save the preprocessed data
@@ -277,31 +330,12 @@ class DataPreprocessor:
             os.makedirs(f'data/processed')
         processed_data.to_csv(f'data/processed/merged_data_processed.csv', index=False)
         
-        # Save category mappings
-        self.save_category_mappings()
-        joblib.dump(self.category_mappings, 'models/category_mappings.joblib')
-        
         # Save average features
         self.save_avg_features_lookup()
         self.avg_features.to_csv('data/processed/avg_features.csv', index=False)
         
         # Save the preprocessor
         joblib.dump(self.preprocessor, 'models/preprocessor.joblib')
-
-    def save_category_mappings(self):
-        if self.data is None or self.data.empty:
-            print("Warning: self.data is not initialized.")
-            return
-
-        for col in categorical_features_for_embedding:
-            unique_values = self.data[col].dropna().unique()
-            current_mapping = {val: i+1 for i, val in enumerate(unique_values)}
-            # Merge with existing mappings
-            self.category_mappings[col] = {**self.category_mappings[col], **current_mapping}
-
-        # Add an entry for unknown categories
-        for col, mapping in self.category_mappings.items():
-            mapping['unknown'] = 0
 
     def save_avg_features_lookup(self):
         avg_features = self.data.groupby(['startingAirport', 'destinationAirport']).agg({
@@ -316,5 +350,8 @@ class DataPreprocessor:
             'segmentsDistance': 'median_segments_distance'
         }, inplace=True)
 
-        # Concatenate with existing avg features
-        self.avg_features = pd.concat([self.avg_features, avg_features], ignore_index=True).drop_duplicates(subset=['startingAirport', 'destinationAirport'])
+        # Concatenate with existing avg features, or assign directly if it's empty
+        if self.avg_features.empty:
+            self.avg_features = avg_features
+        else:
+            self.avg_features = pd.concat([self.avg_features, avg_features], ignore_index=True).drop_duplicates(subset=['startingAirport', 'destinationAirport'])
