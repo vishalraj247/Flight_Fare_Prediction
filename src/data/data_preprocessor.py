@@ -225,7 +225,7 @@ class DataPreprocessor:
         
         # Convert input dict to DataFrame
         input_df = pd.DataFrame([user_input])
-        st.write("Initial Input DataFrame:", input_df)  # DEBUGGING LINE
+#        st.write("Initial Input DataFrame:", input_df)  # DEBUGGING LINE
         
         # Add a dummy 'totalFare' column
         input_df['totalFare'] = 0
@@ -267,7 +267,7 @@ class DataPreprocessor:
             input_df['segmentsDurationInSeconds'] = avg_features['median_duration'].median()
             input_df['segmentsDistance'] = avg_features['median_segments_distance'].median()
         
-        st.write("After Adding Average Features:", input_df)  # DEBUGGING LINE
+#        st.write("After Adding Average Features:", input_df)  # DEBUGGING LINE
 
         # Convert the time to string and concatenate with a dummy date
         input_df['segmentsDepartureTimeRaw'] = "2000-01-01 " + input_df['segmentsDepartureTimeRaw'].astype(str)
@@ -291,7 +291,7 @@ class DataPreprocessor:
         for col in ['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance']:
             preprocessed_input[col] = input_df[col]
 
-        st.write("Final Preprocessed Input:", preprocessed_input)  # DEBUGGING LINE
+#        st.write("Final Preprocessed Input:", preprocessed_input)  # DEBUGGING LINE
 
         return preprocessed_input
 
@@ -314,8 +314,8 @@ class DataPreprocessor:
         
         # Concatenate all dataframes into one
         self.data = pd.concat(data_frames, ignore_index=True)
-        # Take a random 5% sample of the merged dataset for debugging
-        debug_fraction = 0.05
+        # Take a random 50% sample of the merged dataset for debugging
+        debug_fraction = 0.5
         self.data = self.data.sample(frac=debug_fraction).reset_index(drop=True)
 
         # Create the category mappings after merging all datasets
