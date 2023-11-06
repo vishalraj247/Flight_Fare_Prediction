@@ -60,7 +60,7 @@ class DataPreprocessor:
             current_mapping['unknown'] = 0  # Add an entry for unknown categories
             self.category_mappings[col] = current_mapping
 
-    def save_category_mappings(self, path='models/category_mappings.joblib'):
+    def save_category_mappings(self, path='models/category_mappings_dl.joblib'):
         """
         Save the category mappings to a joblib file.
         """
@@ -69,7 +69,7 @@ class DataPreprocessor:
             return
         joblib.dump(self.category_mappings, path)
 
-    def load_category_mappings(self, path='models/category_mappings.joblib'):
+    def load_category_mappings(self, path='models/category_mappings_dl.joblib'):
         """
         Load the category mappings from a joblib file.
         """
@@ -315,7 +315,7 @@ class DataPreprocessor:
         # Concatenate all dataframes into one
         self.data = pd.concat(data_frames, ignore_index=True)
         # Take a random 50% sample of the merged dataset for debugging
-        debug_fraction = 0.5
+        debug_fraction = 0.25
         self.data = self.data.sample(frac=debug_fraction).reset_index(drop=True)
 
         # Create the category mappings after merging all datasets
@@ -328,14 +328,14 @@ class DataPreprocessor:
         # Save the preprocessed data
         if not os.path.exists(f'data/processed'):
             os.makedirs(f'data/processed')
-        processed_data.to_csv(f'data/processed/merged_data_processed.csv', index=False)
+        processed_data.to_csv(f'data/processed/merged_data_processed_dl.csv', index=False)
         
         # Save average features
         self.save_avg_features_lookup()
-        self.avg_features.to_csv('data/processed/avg_features.csv', index=False)
+        self.avg_features.to_csv('data/processed/avg_features_dl.csv', index=False)
         
         # Save the preprocessor
-        joblib.dump(self.preprocessor, 'models/preprocessor.joblib')
+        joblib.dump(self.preprocessor, 'models/preprocessor_dl.joblib')
 
     def save_avg_features_lookup(self):
         avg_features = self.data.groupby(['startingAirport', 'destinationAirport']).agg({

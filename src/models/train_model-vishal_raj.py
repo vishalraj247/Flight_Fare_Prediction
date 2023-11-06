@@ -63,7 +63,7 @@ class WideDeepModel:
         self.data = self.load_merged_data()
 
     @staticmethod
-    def load_merged_data(filename='merged_data_processed.csv', base_path='data/processed'):
+    def load_merged_data(filename='merged_data_processed_dl.csv', base_path='data/processed'):
         data_path = os.path.join(base_path, filename)
         return pd.read_csv(data_path)
 
@@ -170,7 +170,7 @@ class WideDeepModel:
 
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
         reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=0.005)
-        model_checkpoint = tf.keras.callbacks.ModelCheckpoint("models/best_model", save_best_only=True)
+        model_checkpoint = tf.keras.callbacks.ModelCheckpoint("models/best_model-vishal_raj", save_best_only=True)
 
         history = self.model.fit(
             [train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep], 
