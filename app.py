@@ -7,10 +7,13 @@ import pandas as pd
 # Set Streamlit app title
 st.title("Flight Fare Prediction")
 
+# List of airports
+airports_list = ['ATL', 'MIA', 'PHL', 'SFO', 'LGA', 'LAX', 'ORD', 'IAD', 'EWR', 'DEN', 'DFW', 'BOS', 'OAK', 'DTW', 'CLT', 'JFK']
+
 # Collect user inputs via Streamlit
 user_input = {
-    'startingAirport': st.text_input('Enter origin airport:'),
-    'destinationAirport': st.text_input('Enter destination airport:'),
+    'startingAirport': st.selectbox('Select origin airport:', options=airports_list),
+    'destinationAirport': st.selectbox('Select destination airport:', options=airports_list),
     'flightDate': st.date_input('Select flight date:'),
     'segmentsDepartureTimeRaw': st.time_input('Select departure time:'),
     'segmentsCabinCode': st.selectbox('Choose cabin type:', options=['coach', 'premium coach', 'first', 'business'])
@@ -22,19 +25,20 @@ if st.button("Predict"):
     data_preprocessor = DataPreprocessor()
     preprocessed_input = data_preprocessor.preprocess_user_input(
         user_input,
-        'models/preprocessor.joblib',
-        'models/category_mappings.joblib',
-        'data/processed/avg_features.csv'
+        'models/preprocessor_dl.joblib',
+        'models/category_mappings_dl.joblib',
+        'data/processed/avg_features_dl.csv'
     )
 
     # Paths to all the students' models
     model_paths = [
-        "models/best_model",  #Vishal Raj's Model
+        "models/best_model-vishal_raj",  #Vishal Raj's Model
     #    "models/student2_model",
     #    "models/student3_model",
     #    "models/student4_model"
     ]
 
+    #Debugging App
     # def get_temp_data():
     #     data = {
     #         'totalTravelDistance': [-0.048909],
