@@ -147,6 +147,30 @@ class DataPreprocessor:
         ]
         self.split_and_explode(columns_to_split_and_explode)
         
+        # Record the number of rows before removing duplicates
+        rows_before = self.data.shape[0]
+
+        # Define the columns you want to consider when checking for duplicates
+        # Replace 'columns_to_consider_for_duplicates' with the actual columns you want to check
+        columns_to_consider_for_duplicates = [
+            'segmentsDepartureTimeRaw', 'segmentsDurationInSeconds',
+            'segmentsDistance', 'segmentsCabinCode', 'flightDate', 'startingAirport', 'destinationAirport',
+            'travelDuration', 'totalTravelDistance', 'totalFare'
+        ]
+
+        # Remove duplicate rows based on the subset of columns
+        self.data = self.data.drop_duplicates(subset=columns_to_consider_for_duplicates)
+
+        # Reset index after removing duplicates to ensure index integrity
+        self.data.reset_index(drop=True, inplace=True)
+
+        # Record the number of rows after removing duplicates and calculate the difference
+        rows_after = self.data.shape[0]
+        duplicates_removed = rows_before - rows_after
+
+        # Report the number of removed duplicate rows
+        print(f"Removed {duplicates_removed} duplicate rows based on the specified subset of columns")
+
         # Diagnostic print
         print("Unique values in segmentsCabinCode after split and explode:")
         print(self.data['segmentsCabinCode'].unique())
@@ -204,7 +228,7 @@ class DataPreprocessor:
         
         # Check for any remaining missing values
         self.check_for_missing_values()
-        
+
         # After transforming the data, concatenate the totalFare column back
         self.data['totalFare'] = totalFare_column
 
@@ -314,9 +338,9 @@ class DataPreprocessor:
         
         # Concatenate all dataframes into one
         self.data = pd.concat(data_frames, ignore_index=True)
-        # Take a random 50% sample of the merged dataset for debugging
-        debug_fraction = 0.25
-        self.data = self.data.sample(frac=debug_fraction).reset_index(drop=True)
+        # Take a random 50% sample of the merged dataset for time complexity
+        #time_complexity = 0.05
+        #self.data = self.data.sample(frac=time_complexity).reset_index(drop=True)
 
         # Create the category mappings after merging all datasets
         self.create_category_mappings()

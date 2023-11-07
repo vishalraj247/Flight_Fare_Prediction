@@ -31,12 +31,12 @@ if st.button("Predict"):
     )
 
     # Paths to all the students' models
-    model_paths = [
-        "models/best_model-vishal_raj",  #Vishal Raj's Model
-    #    "models/student2_model",
-    #    "models/student3_model",
-    #    "models/student4_model"
-    ]
+    model_student_mapping = {
+        "models/best_model-vishal_raj": "Vishal Raj's Model",
+    #    "models/best_model_Shivatmak": "Student 2's Model",
+    #    "models/student3_model": "Student 3's Model",
+    #    "models/student4_model": "Student 4's Model"
+    }
 
     #Debugging App
     # def get_temp_data():
@@ -68,7 +68,7 @@ if st.button("Predict"):
     #preprocessed_input = temp_data.drop(columns=['totalFare'])
 
     # Loop through each model, predict and display results
-    for idx, model_path in enumerate(model_paths, 1):
+    for model_path, student_name in model_student_mapping.items():
         # Load the trained model
         model = tf.keras.models.load_model(model_path)
         # Identify and print the input shapes
@@ -94,7 +94,6 @@ if st.button("Predict"):
         # Pass these inputs as a list to the model
         predicted_fare = model.predict([wide_features, startingAirport, destinationAirport, segmentsCabinCode, deep_features])
 
-        # Display the predicted fare
-        st.write(f"Prediction from Model {idx}: ${predicted_fare[0][0]:.2f}")
-
+        # Display the predicted fare with the student name
+        st.write(f"Prediction from {student_name}: ${predicted_fare[0][0]:.2f}")
 
