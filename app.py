@@ -33,7 +33,7 @@ if st.button("Predict"):
     # Paths to all the students' models
     model_student_mapping = {
         "models/best_model-vishal_raj": "Vishal Raj's Model",
-    #    "models/best_model_Shivatmak": "Student 2's Model",
+        "models/best_model_Shivatmak": "Shivatmak's Model",
     #    "models/student3_model": "Student 3's Model",
     #    "models/student4_model": "Student 4's Model"
     }
@@ -54,7 +54,7 @@ if st.button("Predict"):
     #         'flightDate_is_weekend': [0],
     #         'segmentsDepartureTimeRaw_hour': [16],
     #         'segmentsDepartureTimeRaw_minute': [30],
-    #         'totalFare': [96.78]
+    #         'modeFare': [96.78]
     #     }
     #     return pd.DataFrame(data)
     
@@ -64,8 +64,8 @@ if st.button("Predict"):
     # Display the temporary data
     #st.dataframe(temp_data)
 
-    # Get your preprocessed input (excluding the 'totalFare' column as it's the target variable)
-    #preprocessed_input = temp_data.drop(columns=['totalFare'])
+    # Get your preprocessed input (excluding the 'modeFare' column as it's the target variable)
+    #preprocessed_input = temp_data.drop(columns=['modeFare'])
 
     # Loop through each model, predict and display results
     for model_path, student_name in model_student_mapping.items():
@@ -91,9 +91,13 @@ if st.button("Predict"):
         # 5. Deep features
         deep_features = preprocessed_input[['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance']].values
 
-        # Pass these inputs as a list to the model
-        predicted_fare = model.predict([wide_features, startingAirport, destinationAirport, segmentsCabinCode, deep_features])
+        # 6. Numerical features
+        numerical_features = preprocessed_input[['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance']].values
 
-        # Display the predicted fare with the student name
-        st.write(f"Prediction from {student_name}: ${predicted_fare[0][0]:.2f}")
-
+        # Predict and display results depending on model path
+        if "vishal_raj" in model_path:
+            predicted_fare = model.predict([wide_features, startingAirport, destinationAirport, segmentsCabinCode, deep_features])
+            st.write(f"Prediction from {student_name}: ${predicted_fare[0][0]:.2f}")
+        elif "Shivatmak" in model_path:
+            predicted_fare1 = model.predict([startingAirport, destinationAirport, segmentsCabinCode, numerical_features])
+            st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")

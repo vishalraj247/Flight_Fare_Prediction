@@ -106,8 +106,8 @@ class DataPreprocessor:
         columns_to_explode: List of column names to explode
         """
         # Diagnostic print before explosion
-        print("Data before explosion:")
-        print(self.data.head())
+        #print("Data before explosion:")
+        #print(self.data.head())
         # Fill NaN values in segmentsDistance with 'None' before splitting and exploding
         if 'segmentsDistance' in columns_to_explode:
             self.data['segmentsDistance'].fillna('None', inplace=True)
@@ -132,12 +132,57 @@ class DataPreprocessor:
         # Reset the index to ensure unique indices
         self.data.reset_index(drop=True, inplace=True)
         # Diagnostic print after explosion
-        print("Data after explosion:")
-        print(self.data.head())
+        #print("Data after explosion:")
+        #print(self.data.head())
         # Check if the column is the datetime column 'segmentsDepartureTimeRaw'
         if 'segmentsDepartureTimeRaw' in columns_to_explode:
             # Ensure that the exploded values are valid datetime strings
             self.data['segmentsDepartureTimeRaw'] = self.data['segmentsDepartureTimeRaw'].str.extract(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})')[0]
+
+    def check_for_missing_values(self):
+        missing_values = self.data.isnull().sum()
+        if missing_values.any():
+            print(f"Warning: There are missing values in the processed data:\n{missing_values[missing_values > 0]}")
+        else:
+            print("No missing values in the processed data.")
+
+    def replace_fare_with_mode(self):
+        # Calculate the mode of the fare for each group
+        mode_fare_df = self.data.groupby([
+            'segmentsDepartureTimeRaw', 'segmentsDurationInSeconds', 'segmentsDistance',
+            'segmentsCabinCode', 'flightDate', 'startingAirport', 'destinationAirport',
+            'travelDuration', 'totalTravelDistance'
+        ])['totalFare'].agg(lambda x: x.mode()[0]).reset_index(name='modeFare')
+        
+        # Drop the original totalFare
+        self.data = self.data.drop(columns='totalFare')
+
+        # Merge the mode fare back onto the original dataset
+        self.data = pd.merge(
+            self.data,
+            mode_fare_df,
+            on=[
+                'segmentsDepartureTimeRaw', 'segmentsDurationInSeconds', 'segmentsDistance',
+                'segmentsCabinCode', 'flightDate', 'startingAirport', 'destinationAirport',
+                'travelDuration', 'totalTravelDistance'
+            ],
+            how='inner'
+        )
+
+    def downcast_dtypes(self, df):
+        # Downcast floating types using pandas to_numeric() with downcast parameter
+        float_cols = df.select_dtypes(include=['float']).columns
+        for col in float_cols:
+            df[col] = pd.to_numeric(df[col], downcast='float')
+
+        # Downcast integer types, checking for NaN values first
+        int_cols = df.select_dtypes(include=['int']).columns
+        for col in int_cols:
+            # Only downcast columns that do not contain null values
+            if not df[col].isnull().any():
+                df[col] = pd.to_numeric(df[col], downcast='integer')
+
+        return df
 
     def preprocess_data(self):
         # Handle columns with '||' entries: split and explode to multiple rows
@@ -171,11 +216,14 @@ class DataPreprocessor:
         # Report the number of removed duplicate rows
         print(f"Removed {duplicates_removed} duplicate rows based on the specified subset of columns")
 
+        # Call the method to replace totalFare with modeFare
+        self.replace_fare_with_mode()
+
         # Diagnostic print
         print("Unique values in segmentsCabinCode after split and explode:")
         print(self.data['segmentsCabinCode'].unique())
-        # Store the totalFare column after split_and_explode and before applying transformations
-        totalFare_column = self.data['totalFare'].copy()
+        # Store the modeFare column after split_and_explode and before applying transformations
+        modeFare_column = self.data['modeFare'].copy()
 
         # Map the categorical columns using the category mappings
         self.data = self.encode_categorical_columns(self.data)
@@ -203,6 +251,22 @@ class DataPreprocessor:
             ('date_features', DateFeatureExtractor())
         ])
         
+        data_type_mapping = {
+            'totalTravelDistance': 'float64',
+            'segmentsDurationInSeconds': 'float64',
+            'segmentsDistance': 'float64',
+            'startingAirport': 'int64',
+            'destinationAirport': 'int64',
+            'segmentsCabinCode': 'int64',
+            'flightDate_year': 'int64',
+            'flightDate_month': 'int64',
+            'flightDate_day': 'int64',
+            'flightDate_weekday': 'int64',
+            'segmentsDepartureTimeRaw_hour': 'int64',
+            'segmentsDepartureTimeRaw_minute': 'int64',
+            'modeFare': 'float64',
+        }
+
         # Apply the preprocessor
         if self.preprocessor is None:  # Check if the preprocessor is already instantiated
             self.preprocessor = ColumnTransformer(
@@ -226,20 +290,33 @@ class DataPreprocessor:
         all_columns = numerical_features + categorical_features_for_embedding + datetime_extracted_features
         self.data = pd.DataFrame(transformed_data, columns=all_columns)
         
+        # Set the correct data types using the mapping
+        for column, dtype in data_type_mapping.items():
+            if column in self.data.columns:  # Ensure the column is in the DataFrame
+                # For boolean, we need to ensure it's a separate case since there's no 'astype' for 'bool' directly.
+                if dtype == 'bool':  # Assuming you have boolean logic to set this type
+                    self.data[column] = self.data[column].astype('bool')
+                else:
+                    self.data[column] = self.data[column].astype(dtype)
+
         # Check for any remaining missing values
         self.check_for_missing_values()
 
-        # After transforming the data, concatenate the totalFare column back
-        self.data['totalFare'] = totalFare_column
+        # After transforming the data, concatenate the modeFare column back
+        self.data['modeFare'] = modeFare_column
+
+        # Print dtypes before downcasting
+        #print("Data types before downcasting:")
+        #print(self.data.dtypes)  # This will print the current data types of all columns
+
+        # Downcast dtypes before returning the processed data
+        self.data = self.downcast_dtypes(self.data)
+
+        # Print dtypes after downcasting
+        #print("Data types after downcasting:")
+        #print(self.data.dtypes)  # This will print the data types after downcasting
 
         return self.data
-
-    def check_for_missing_values(self):
-        missing_values = self.data.isnull().sum()
-        if missing_values.any():
-            print(f"Warning: There are missing values in the processed data:\n{missing_values[missing_values > 0]}")
-        else:
-            print("No missing values in the processed data.")
 
     def preprocess_user_input(self, user_input, preprocessor_path, mappings_path, avg_features_path):
         # Load preprocessor, mappings, and avg_features
@@ -251,8 +328,8 @@ class DataPreprocessor:
         input_df = pd.DataFrame([user_input])
 #        st.write("Initial Input DataFrame:", input_df)  # DEBUGGING LINE
         
-        # Add a dummy 'totalFare' column
-        input_df['totalFare'] = 0
+        # Add a dummy 'modeFare' column
+        input_df['modeFare'] = 0
 
         # Display user's input for segmentsCabinCode before mapping
 #        st.write(f"User's input for segmentsCabinCode before mapping: {input_df['segmentsCabinCode'].values[0]}")
@@ -349,6 +426,8 @@ class DataPreprocessor:
         # Preprocess the merged dataset using the created mappings
         processed_data = self.preprocess_data()
 
+        print(processed_data.dtypes)
+
         # Save the preprocessed data
         if not os.path.exists(f'data/processed'):
             os.makedirs(f'data/processed')
@@ -360,6 +439,9 @@ class DataPreprocessor:
         
         # Save the preprocessor
         joblib.dump(self.preprocessor, 'models/preprocessor_dl.joblib')
+
+        # Return the processed data, preprocessor, and average features for use in memory
+        return processed_data, self.preprocessor, self.avg_features
 
     def save_avg_features_lookup(self):
         avg_features = self.data.groupby(['startingAirport', 'destinationAirport']).agg({

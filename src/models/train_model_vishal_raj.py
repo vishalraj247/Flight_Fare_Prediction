@@ -2,6 +2,8 @@ import os
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
+from src.data.data_preprocessor import DataPreprocessor
+
 #from keras_tuner import HyperModel, Hyperband
 #from tensorflow.keras import regularizers
 
@@ -57,15 +59,18 @@ from sklearn.model_selection import train_test_split
 
 class WideDeepModel:
     
-    def __init__(self):
+    def __init__(self, processed_data, preprocessor, avg_features):
         self.embedding_sizes = None
         self.model = None
-        self.data = self.load_merged_data()
+        self.preprocessor = preprocessor
+        self.avg_features = avg_features
+        self.data = processed_data
+        self.compute_embedding_sizes()
 
-    @staticmethod
-    def load_merged_data(filename='merged_data_processed_dl.csv', base_path='data/processed'):
-        data_path = os.path.join(base_path, filename)
-        return pd.read_csv(data_path)
+#    @staticmethod
+#    def load_merged_data(filename='merged_data_processed_dl.csv', base_path='data/processed'):
+#        data_path = os.path.join(base_path, filename)
+#        return pd.read_csv(data_path)
 
     def compute_embedding_sizes(self):
         self.embedding_sizes = {
@@ -139,8 +144,8 @@ class WideDeepModel:
         train_other_wide = train_data[['flightDate_year', 'flightDate_month', 'flightDate_day', 'flightDate_weekday', 'flightDate_is_weekend', 'segmentsDepartureTimeRaw_hour', 'segmentsDepartureTimeRaw_minute']].values.astype('float32')
         valid_other_wide = valid_data[['flightDate_year', 'flightDate_month', 'flightDate_day', 'flightDate_weekday', 'flightDate_is_weekend', 'segmentsDepartureTimeRaw_hour', 'segmentsDepartureTimeRaw_minute']].values.astype('float32')
 
-        train_labels = train_data['totalFare'].values.astype('float32')
-        valid_labels = valid_data['totalFare'].values.astype('float32')
+        train_labels = train_data['modeFare'].values.astype('float32')
+        valid_labels = valid_data['modeFare'].values.astype('float32')
 
         return train_data, valid_data, test_data, train_other_wide, train_startingAirport, train_destinationAirport, train_segmentsCabinCode, train_deep, valid_other_wide, valid_startingAirport, valid_destinationAirport, valid_segmentsCabinCode, valid_deep, train_labels, valid_labels
 
@@ -196,7 +201,7 @@ class WideDeepModel:
         test_segmentsCabinCode = test_data['segmentsCabinCode'].values.astype('float32').reshape(-1, 1)
         test_deep = test_data[['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance']].values.astype('float32')
         
-        test_labels = test_data['totalFare'].values.astype('float32')
+        test_labels = test_data['modeFare'].values.astype('float32')
 
         # Predictions on the test set
         predictions = self.model.predict([test_other_wide, test_startingAirport, test_destinationAirport, test_segmentsCabinCode, test_deep], batch_size=batch_size)
