@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-from src.data.data_preprocessor import DataPreprocessor
+from src.data.data_preprocessor_dl import DataPreprocessor
 
 #from keras_tuner import HyperModel, Hyperband
 #from tensorflow.keras import regularizers

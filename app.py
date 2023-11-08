@@ -38,35 +38,6 @@ if st.button("Predict"):
     #    "models/student4_model": "Student 4's Model"
     }
 
-    #Debugging App
-    # def get_temp_data():
-    #     data = {
-    #         'totalTravelDistance': [-0.048909],
-    #         'segmentsDurationInSeconds': [1.117018],
-    #         'segmentsDistance': [-0.290983],
-    #         'startingAirport': [0],
-    #         'destinationAirport': [5],
-    #         'segmentsCabinCode': [0],
-    #         'flightDate_year': [2022],
-    #         'flightDate_month': [5],
-    #         'flightDate_day': [4],
-    #         'flightDate_weekday': [2],
-    #         'flightDate_is_weekend': [0],
-    #         'segmentsDepartureTimeRaw_hour': [16],
-    #         'segmentsDepartureTimeRaw_minute': [30],
-    #         'modeFare': [96.78]
-    #     }
-    #     return pd.DataFrame(data)
-    
-    # Get the temporary data
-    #temp_data = get_temp_data()
-
-    # Display the temporary data
-    #st.dataframe(temp_data)
-
-    # Get your preprocessed input (excluding the 'modeFare' column as it's the target variable)
-    #preprocessed_input = temp_data.drop(columns=['modeFare'])
-
     # Loop through each model, predict and display results
     for model_path, student_name in model_student_mapping.items():
         # Load the trained model
