@@ -3,6 +3,7 @@ from src.data.data_preprocessor import DataPreprocessor
 import joblib
 import tensorflow as tf
 import pandas as pd
+from datetime import time, timedelta
 
 # Set Streamlit app title
 st.title("Flight Fare Prediction")
@@ -10,12 +11,27 @@ st.title("Flight Fare Prediction")
 # List of airports
 airports_list = ['ATL', 'MIA', 'PHL', 'SFO', 'LGA', 'LAX', 'ORD', 'IAD', 'EWR', 'DEN', 'DFW', 'BOS', 'OAK', 'DTW', 'CLT', 'JFK']
 
-# Collect user inputs via Streamlit
+# Collect user inputs for the starting airport
+starting_airport = st.selectbox('Select origin airport:', options=airports_list)
+
+# Update destination options based on the starting airport choice
+destination_airports_list = [airport for airport in airports_list if airport != starting_airport]
+destination_airport = st.selectbox('Select destination airport:', options=destination_airports_list)
+
+# User selects time in 15-minute intervals
+departure_time = st.slider(
+    "Select departure time:", 
+    value=time(12, 0),  # default value to current time or any other logic you prefer
+    format="HH:mm",  # format of the time displayed
+    step=timedelta(minutes=3)  # step size as 3 minutes
+)
+
+# Store user inputs in a dictionary
 user_input = {
-    'startingAirport': st.selectbox('Select origin airport:', options=airports_list),
-    'destinationAirport': st.selectbox('Select destination airport:', options=airports_list),
+    'startingAirport': starting_airport,
+    'destinationAirport': destination_airport,
     'flightDate': st.date_input('Select flight date:'),
-    'segmentsDepartureTimeRaw': st.time_input('Select departure time:'),
+    'segmentsDepartureTimeRaw': departure_time,
     'segmentsCabinCode': st.selectbox('Choose cabin type:', options=['coach', 'premium coach', 'first', 'business'])
 }
 
