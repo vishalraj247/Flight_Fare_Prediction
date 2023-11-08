@@ -34,7 +34,7 @@ if st.button("Predict"):
     model_student_mapping = {
         "models/best_model-vishal_raj": "Vishal Raj's Model",
         "models/best_model_Shivatmak": "Shivatmak's Model",
-    #    "models/student3_model": "Student 3's Model",
+    #    "models/ronik_model": "Ronik's Model",
     #    "models/student4_model": "Student 4's Model"
     }
 
@@ -101,3 +101,6 @@ if st.button("Predict"):
         elif "Shivatmak" in model_path:
             predicted_fare1 = model.predict([startingAirport, destinationAirport, segmentsCabinCode, numerical_features])
             st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
+#        elif "Ronik" in model_path:
+#            predicted_fare2 = 
+#            st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
