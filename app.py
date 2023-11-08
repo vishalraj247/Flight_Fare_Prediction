@@ -1,5 +1,6 @@
 import streamlit as st
 from src.data.data_preprocessor import DataPreprocessor
+from src.data.ml_model_data_preprocessor import PreProcessor
 import joblib
 import tensorflow as tf
 import pandas as pd
@@ -7,10 +8,13 @@ import pandas as pd
 # Set Streamlit app title
 st.title("Flight Fare Prediction")
 
+# List of airports
+airports_list = ['ATL', 'MIA', 'PHL', 'SFO', 'LGA', 'LAX', 'ORD', 'IAD', 'EWR', 'DEN', 'DFW', 'BOS', 'OAK', 'DTW', 'CLT', 'JFK']
+
 # Collect user inputs via Streamlit
 user_input = {
-    'startingAirport': st.text_input('Enter origin airport:'),
-    'destinationAirport': st.text_input('Enter destination airport:'),
+    'startingAirport': st.selectbox('Select origin airport:', options=airports_list),
+    'destinationAirport': st.selectbox('Select destination airport:', options=airports_list),
     'flightDate': st.date_input('Select flight date:'),
     'segmentsDepartureTimeRaw': st.time_input('Select departure time:'),
     'segmentsCabinCode': st.selectbox('Choose cabin type:', options=['coach', 'premium coach', 'first', 'business'])
@@ -18,23 +22,29 @@ user_input = {
 
 # Create a "Predict" button
 if st.button("Predict"):
+
     # Preprocess user input
     data_preprocessor = DataPreprocessor()
     preprocessed_input = data_preprocessor.preprocess_user_input(
         user_input,
-        'models/preprocessor.joblib',
-        'models/category_mappings.joblib',
-        'data/processed/avg_features.csv'
+        'models/preprocessor_dl.joblib',
+        'models/category_mappings_dl.joblib',
+        'data/processed/avg_features_dl.csv'
     )
 
-    # Paths to all the students' models
-    model_paths = [
-        "models/best_model",  #Vishal Raj's Model
-    #    "models/student2_model",
-    #    "models/student3_model",
-    #    "models/student4_model"
-    ]
+    ml_preprocessor = PreProcessor()
+    prediction_ronik = ml_preprocessor.preprocess_for_user_input(user_input, 'models/mapped_average_values_ronik.csv')
+   
 
+    # Paths to all the students' models
+    model_student_mapping = {
+        "models/best_model-vishal_raj": "Vishal Raj's Model",
+        "models/best_model_Shivatmak": "Shivatmak's Model",
+        "models/best-model-ronik": "Ronik's Model",
+    #    "models/student4_model": "Student 4's Model"
+    }
+
+    #Debugging App
     # def get_temp_data():
     #     data = {
     #         'totalTravelDistance': [-0.048909],
@@ -50,7 +60,7 @@ if st.button("Predict"):
     #         'flightDate_is_weekend': [0],
     #         'segmentsDepartureTimeRaw_hour': [16],
     #         'segmentsDepartureTimeRaw_minute': [30],
-    #         'totalFare': [96.78]
+    #         'modeFare': [96.78]
     #     }
     #     return pd.DataFrame(data)
     
@@ -60,11 +70,11 @@ if st.button("Predict"):
     # Display the temporary data
     #st.dataframe(temp_data)
 
-    # Get your preprocessed input (excluding the 'totalFare' column as it's the target variable)
-    #preprocessed_input = temp_data.drop(columns=['totalFare'])
+    # Get your preprocessed input (excluding the 'modeFare' column as it's the target variable)
+    #preprocessed_input = temp_data.drop(columns=['modeFare'])
 
     # Loop through each model, predict and display results
-    for idx, model_path in enumerate(model_paths, 1):
+    for model_path, student_name in model_student_mapping.items():
         # Load the trained model
         model = tf.keras.models.load_model(model_path)
         # Identify and print the input shapes
@@ -87,10 +97,17 @@ if st.button("Predict"):
         # 5. Deep features
         deep_features = preprocessed_input[['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance']].values
 
-        # Pass these inputs as a list to the model
-        predicted_fare = model.predict([wide_features, startingAirport, destinationAirport, segmentsCabinCode, deep_features])
-
-        # Display the predicted fare
-        st.write(f"Prediction from Model {idx}: ${predicted_fare[0][0]:.2f}")
+        # 6. Numerical features
+        numerical_features = preprocessed_input[['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance']].values
 
 
+
+        # Predict and display results depending on model path
+        if "vishal_raj" in model_path:
+            predicted_fare = model.predict([wide_features, startingAirport, destinationAirport, segmentsCabinCode, deep_features])
+            st.write(f"Prediction from {student_name}: ${predicted_fare[0][0]:.2f}")
+        elif "Shivatmak" in model_path:
+            predicted_fare1 = model.predict([startingAirport, destinationAirport, segmentsCabinCode, numerical_features])
+            st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
+        elif "Ronik" in model_path:
+           st.write(f"Prediction from {student_name}: ${prediction_ronik[0]:.2f}")
