@@ -7,6 +7,7 @@ class PreProcessor:
     def __init__(self):
         self.data = None
         self.preprocessed_data = None
+        self.user_df = None
 
     def split_and_explode(self, columns_to_explode):
         """
@@ -53,7 +54,7 @@ class PreProcessor:
             self.data['segmentsDepartureTimeRaw'] = self.data['segmentsDepartureTimeRaw'].str.extract(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})')[0]
 
     def get_date_time(self, df):
-
+        
         df['segmentsDepartureTimeRaw'] = pd.to_datetime(df['segmentsDepartureTimeRaw'])
         df['year'] = df['segmentsDepartureTimeRaw'].dt.year
         df['month'] = df['segmentsDepartureTimeRaw'].dt.month
@@ -63,6 +64,7 @@ class PreProcessor:
 
         df = df.drop(['flightDate', 'segmentsDepartureTimeRaw'], axis=1)
         return df
+
 
     def imputation_numerical(self, df):
         df['totalTravelDistance'].fillna(df.groupby(['startingAirport', 'destinationAirport'])['totalTravelDistance'].transform(lambda x: x.mode().max()), inplace=True)
@@ -165,3 +167,23 @@ class PreProcessor:
         self.split_and_explode(columns_to_split_and_explode)
         self.data.to_csv(f'data/processed/exploded_merged_data.csv', index=False)
 
+
+    def preprocess_for_user_input(self, user_input, average_values_path):
+        self.user_df = pd.DataFrame([user_input])
+        if self.user_df['segmentsDepartureTimeRaw'].dtype == 'object':
+
+            self.user_df['flightDate'] = pd.to_datetime(self.user_df['flightDate'].astype(str), format='%Y-%m-%d', errors='coerce')
+            self.user_df['segmentsDepartureTimeRaw'] = self.user_df['segmentsDepartureTimeRaw'].astype(str)
+            self.user_df['segmentsDepartureTimeRaw'] = self.user_df['flightDate'].astype(str) + ' ' + self.user_df['segmentsDepartureTimeRaw']
+            self.user_df['segmentsDepartureTimeRaw'] = pd.to_datetime(self.user_df['segmentsDepartureTimeRaw'], format='%Y-%m-%d %H:%M:%S', errors='coerce')
+            self.user_df = self.get_date_time(self.user_df)
+            self.user_df = self.map_categorical_features(self.user_df)
+            average_values = pd.read_csv(average_values_path)
+            self.user_df = self.user_df.merge(average_values, on=['startingAirport', 'destinationAirport'], how='left')
+            self.user_df = self.user_df[['startingAirport', 'destinationAirport', 'totalTravelDistance', 'segmentsDurationInSeconds',
+                                            'segmentsDistance', 'segmentsCabinCode', 'year', 'month', 'day',
+                                            'hour', 'minute']]
+            model_xgb = joblib.load("models/best_model/xgboost_model.pb")
+            prediction = model_xgb.predict(self.user_df)
+
+            return np.array(prediction)
