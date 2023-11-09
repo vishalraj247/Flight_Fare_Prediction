@@ -94,6 +94,6 @@ if st.button("Predict"):
             predicted_fare1 = model.predict([startingAirport, destinationAirport, segmentsCabinCode, numerical_features])
             st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
         # elif "aibarna" in model_path:
-    st.write(f"Prediction from Aibarna's Model: ${prediction_aibarna[0]:.2f}")
+    st.write(f"Prediction from Aibarna's Random Regressor Model: ${prediction_aibarna[0]:.2f}")
     
-    st.write(f"Prediction from Ronik's Model: ${prediction_ronik[0]:.2f}")
+    st.write(f"Prediction from Ronik's XGBRegressor Model: ${prediction_ronik[0]:.2f}")
