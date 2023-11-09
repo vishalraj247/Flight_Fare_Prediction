@@ -94,4 +94,4 @@ if st.button("Predict"):
     
     st.write(f"Prediction from Ronik's XGBRegressor Model: ${prediction_ronik[0]:.2f}")
 
-    st.write(f"Prediction from Aibarna's Random Regressor Model: ${prediction_aibarna[0]:.2f}")
+    st.write(f"Prediction from Aibarna's Random Forest Regressor Model: ${prediction_aibarna[0]:.2f}")
