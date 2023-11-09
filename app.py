@@ -1,9 +1,9 @@
 import streamlit as st
 from src.data.data_preprocessor import DataPreprocessor
-from src.data.ml_model_data_preprocessor import PreProcessor
 import joblib
 import tensorflow as tf
 import pandas as pd
+from datetime import time, timedelta
 
 # Set Streamlit app title
 st.title("Flight Fare Prediction")
@@ -11,18 +11,32 @@ st.title("Flight Fare Prediction")
 # List of airports
 airports_list = ['ATL', 'MIA', 'PHL', 'SFO', 'LGA', 'LAX', 'ORD', 'IAD', 'EWR', 'DEN', 'DFW', 'BOS', 'OAK', 'DTW', 'CLT', 'JFK']
 
-# Collect user inputs via Streamlit
+# Collect user inputs for the starting airport
+starting_airport = st.selectbox('Select origin airport:', options=airports_list)
+
+# Update destination options based on the starting airport choice
+destination_airports_list = [airport for airport in airports_list if airport != starting_airport]
+destination_airport = st.selectbox('Select destination airport:', options=destination_airports_list)
+
+# User selects time in 15-minute intervals
+departure_time = st.slider(
+    "Select departure time:", 
+    value=time(12, 0),  # default value to current time or any other logic you prefer
+    format="HH:mm",  # format of the time displayed
+    step=timedelta(minutes=3)  # step size as 3 minutes
+)
+
+# Store user inputs in a dictionary
 user_input = {
-    'startingAirport': st.selectbox('Select origin airport:', options=airports_list),
-    'destinationAirport': st.selectbox('Select destination airport:', options=airports_list),
+    'startingAirport': starting_airport,
+    'destinationAirport': destination_airport,
     'flightDate': st.date_input('Select flight date:'),
-    'segmentsDepartureTimeRaw': st.time_input('Select departure time:'),
+    'segmentsDepartureTimeRaw': departure_time,
     'segmentsCabinCode': st.selectbox('Choose cabin type:', options=['coach', 'premium coach', 'first', 'business'])
 }
 
 # Create a "Predict" button
 if st.button("Predict"):
-
     # Preprocess user input
     data_preprocessor = DataPreprocessor()
     preprocessed_input = data_preprocessor.preprocess_user_input(
@@ -32,46 +46,13 @@ if st.button("Predict"):
         'data/processed/avg_features_dl.csv'
     )
 
-    ml_preprocessor = PreProcessor()
-    prediction_ronik = ml_preprocessor.preprocess_for_user_input(user_input, 'data/processed/mapped_average_values_ronik.csv')
-   
-
     # Paths to all the students' models
     model_student_mapping = {
         "models/best_model-vishal_raj": "Vishal Raj's Model",
         "models/best_model_Shivatmak": "Shivatmak's Model",
-        "models/best-model-ronik": "Ronik's Model",
+    #    "models/ronik_model": "Ronik's Model",
     #    "models/student4_model": "Student 4's Model"
     }
-
-    #Debugging App
-    # def get_temp_data():
-    #     data = {
-    #         'totalTravelDistance': [-0.048909],
-    #         'segmentsDurationInSeconds': [1.117018],
-    #         'segmentsDistance': [-0.290983],
-    #         'startingAirport': [0],
-    #         'destinationAirport': [5],
-    #         'segmentsCabinCode': [0],
-    #         'flightDate_year': [2022],
-    #         'flightDate_month': [5],
-    #         'flightDate_day': [4],
-    #         'flightDate_weekday': [2],
-    #         'flightDate_is_weekend': [0],
-    #         'segmentsDepartureTimeRaw_hour': [16],
-    #         'segmentsDepartureTimeRaw_minute': [30],
-    #         'modeFare': [96.78]
-    #     }
-    #     return pd.DataFrame(data)
-    
-    # Get the temporary data
-    #temp_data = get_temp_data()
-
-    # Display the temporary data
-    #st.dataframe(temp_data)
-
-    # Get your preprocessed input (excluding the 'modeFare' column as it's the target variable)
-    #preprocessed_input = temp_data.drop(columns=['modeFare'])
 
     # Loop through each model, predict and display results
     for model_path, student_name in model_student_mapping.items():
@@ -100,8 +81,6 @@ if st.button("Predict"):
         # 6. Numerical features
         numerical_features = preprocessed_input[['totalTravelDistance', 'segmentsDurationInSeconds', 'segmentsDistance']].values
 
-
-
         # Predict and display results depending on model path
         if "vishal_raj" in model_path:
             predicted_fare = model.predict([wide_features, startingAirport, destinationAirport, segmentsCabinCode, deep_features])
@@ -109,5 +88,6 @@ if st.button("Predict"):
         elif "Shivatmak" in model_path:
             predicted_fare1 = model.predict([startingAirport, destinationAirport, segmentsCabinCode, numerical_features])
             st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
-        elif "Ronik" in model_path:
-           st.write(f"Prediction from {student_name}: ${prediction_ronik[0]:.2f}")
+#        elif "Ronik" in model_path:
+#            predicted_fare2 = 
+#            st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
