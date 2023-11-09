@@ -80,7 +80,8 @@ target/
 /data/interim
 /data/external
 /data/processed/merged_data_processed_dl.csv
-
+/data/processed/exploded_merged_data.csv
+/data/processed/preprocessed_data.csv
 # Mac OS-specific storage files
 .DS_Store
 
