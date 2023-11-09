@@ -184,7 +184,7 @@ class PreProcessor:
             self.user_df = self.user_df[['startingAirport', 'destinationAirport', 'totalTravelDistance', 'segmentsDurationInSeconds',
                                             'segmentsDistance', 'segmentsCabinCode', 'year', 'month', 'day',
                                             'hour', 'minute']]
-            model_xgb = joblib.load("models/best_model/best_model_ronik_final.pb")
+            model_xgb = joblib.load("models/best_model/best-model-ronik/best_model_ronik_final.pb")
             prediction = model_xgb.predict(self.user_df)
 
             return np.array(prediction)
