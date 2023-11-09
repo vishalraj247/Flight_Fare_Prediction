@@ -1,5 +1,6 @@
 import streamlit as st
 from src.data.data_preprocessor import DataPreprocessor
+from src.data.ml_model_data_preprocessor import PreProcessor
 import joblib
 import tensorflow as tf
 import pandas as pd
@@ -46,11 +47,14 @@ if st.button("Predict"):
         'data/processed/avg_features_dl.csv'
     )
 
+    ml_preprocessor = PreProcessor()
+    prediction_ronik = ml_preprocessor.preprocess_for_user_input(user_input, 'data/processed/mapped_average_values_ronik.csv')
+
     # Paths to all the students' models
     model_student_mapping = {
         "models/best_model-vishal_raj": "Vishal Raj's Model",
         "models/best_model_Shivatmak": "Shivatmak's Model",
-    #    "models/ronik_model": "Ronik's Model",
+        "models/best-model-ronik": "Ronik's Model",
     #    "models/student4_model": "Student 4's Model"
     }
 
@@ -88,6 +92,5 @@ if st.button("Predict"):
         elif "Shivatmak" in model_path:
             predicted_fare1 = model.predict([startingAirport, destinationAirport, segmentsCabinCode, numerical_features])
             st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
-#        elif "Ronik" in model_path:
-#            predicted_fare2 = 
-#            st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
+        elif "Ronik" in model_path:
+           st.write(f"Prediction from {student_name}: ${prediction_ronik[0]:.2f}")
