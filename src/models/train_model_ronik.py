@@ -6,6 +6,8 @@ import joblib
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 import numpy as np
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+import matplotlib.pyplot as plt
+
 
 class xgboost_model():
     def __init__(self):
@@ -48,7 +50,7 @@ class xgboost_model():
         fold_num = 0
         for i in range(split):
             X_train_val, X_test_val, y_train_val, y_test_val = train_test_split(X_train, y_train, shuffle=True, test_size=0.2, random_state=i)
-            self.model = XGBRegressor()
+            self.model = XGBRegressor(max_depth=15, learning_rate=0.252, n_estimators= 200)
             self.model.fit(X_train_val, y_train_val)
             y_pred_train = self.model.predict(X_train_val)
             y_pred_test = self.model.predict(X_test_val)
@@ -85,7 +87,7 @@ class xgboost_model():
 
         # Run hyperparameter optimization
         trials = Trials()
-        best = fmin(fn=self.objective, space=space, algo=tpe.suggest, max_evals=10, trials=trials)
+        best = fmin(fn=self.objective, space=space, algo=tpe.suggest, max_evals=25, trials=trials)
 
         self.best_hyperparameters = {
             'max_depth': int(best['max_depth']),
@@ -96,4 +98,15 @@ class xgboost_model():
         print("Best hyperparameters:", self.best_hyperparameters)
 
 
-    
+    def actual_vs_predicted(self, X, y):
+        X_train, X_test, y_train, y_test = train_test_split(X, y, shuffle=True, test_size=0.2, random_state=42)
+        y_pred = self.model.predict(X_test)
+        # Create the actual vs. predicted plot
+        plt.scatter(y_test, y_pred)
+        plt.plot(y_test, y_test, color='red')
+        plt.xlabel("Actual")
+        plt.ylabel("Predicted")
+        plt.title("Actual vs. Predicted")
+        plt.show()
+
+

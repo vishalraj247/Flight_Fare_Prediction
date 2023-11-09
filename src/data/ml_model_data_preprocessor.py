@@ -109,8 +109,9 @@ class PreProcessor:
 
     def preprocess_data(self):
         base_path = 'data/processed'
-        for file in os.listdir(base_path):
-            self.preprocessed_data = pd.read_csv(os.path.join(base_path, file))
+        file = 'exploded_merged_data.csv'
+        self.preprocessed_data = pd.read_csv(os.path.join(base_path, file))
+        print(self.preprocessed_data)
         self.preprocessed_data = self.get_date_time(self.preprocessed_data)
 
         # Downcasting to save memory
