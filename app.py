@@ -92,5 +92,5 @@ if st.button("Predict"):
         elif "Shivatmak" in model_path:
             predicted_fare1 = model.predict([startingAirport, destinationAirport, segmentsCabinCode, numerical_features])
             st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
-        elif "Ronik" in model_path:
+        elif "ronik" in model_path:
            st.write(f"Prediction from {student_name}: ${prediction_ronik[0]:.2f}")
