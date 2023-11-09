@@ -20,7 +20,8 @@ FLIGHT_FARE_PREDICTION/
 │ │ ├── best_model_ronik/ # Ronik's best model artifacts.
 │ ├── best_model_Shivatmak/ # Shivatmak's LSTM model artifacts.
 │ ├── best_model-vishal_raj/ # Vishal Raj's Wide and Deep model artifacts.
-│
+│ ├── best_model_aibarna/ # Aibarna's Random Forest Regressor model artifacts.
+
 ├── notebooks/ # Jupyter notebooks. Naming convention is a number (for ordering),
 │ ├── main_Shivatmak.ipynb # Shivatmak's primary notebook.
 │ ├── main_vishal_raj.ipynb # Vishal Raj's primary notebook.
@@ -28,7 +29,7 @@ FLIGHT_FARE_PREDICTION/
 │
 ├── references/ # Data dictionaries, manuals, and all other explanatory materials.
 │
-├── reports/ # Generated analysis as HTML, PDF, LaTeX, etc.
+├── reports/ # Experiment Reports as PDF.
 │
 ├── src/ # Source code for use in this project.
 │ ├── data/ # Scripts to download or generate data.
@@ -71,7 +72,7 @@ Instructions on how to use the scripts and run the Streamlit application for fli
 
 ## Contributing
 
-Interested in contributing? Check out the contributing guidelines. Please note that this project adheres to a code of conduct, and by participating in the development of this application, you agree to abide by its terms.
+Interested in contributing? Check out the contributing guidelines with pre-existing collaborators. Please note that this project adheres to a code of conduct, and by participating in the development of this application, you agree to abide by its terms.
 
 ## License
 
@@ -84,9 +85,10 @@ Special thanks to the team members who have contributed to this project:
 - Vishal Raj: For deep learning model preprocessing and training the Wide and Deep Neural Network.
 - Shivatmak: For training the LSTM model.
 - Ronik: For preprocessing data and training the XGBRegressor model.
+- Aibarna: For training the Random Forest Regressor model.
 
-We also acknowledge that our successful collaboration overcame the challenge of an incomplete team due to the fourth member not contributing.
+We also acknowledge that our successful collaboration overcame the challenges faced while the course of the project.
 
 ## Contact
 
-For any queries or further discussion regarding the project, feel free to contact us through the project's issue tracker or directly to the contributors' emails provided in their respective notebooks.
+For any queries or further discussion regarding the project, feel free to contact us through the project's issue tracker or directly to the contributors' GitHub Id.
