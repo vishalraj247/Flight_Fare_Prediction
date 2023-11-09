@@ -53,8 +53,8 @@ if st.button("Predict"):
 
     # Paths to all the students' models
     model_student_mapping = {
-        "models/best_model-vishal_raj": "Vishal Raj's Model",
-        "models/best_model_Shivatmak": "Shivatmak's Model",
+        "models/best_model-vishal_raj": "Vishal Raj's Wide and Deep Model",
+        "models/best_model_Shivatmak": "Shivatmak's LSTM Model",
     }
 
     # Loop through each model, predict and display results
