@@ -33,7 +33,7 @@ if st.button("Predict"):
     )
 
     ml_preprocessor = PreProcessor()
-    prediction_ronik = ml_preprocessor.preprocess_for_user_input(user_input, 'models/mapped_average_values_ronik.csv')
+    prediction_ronik = ml_preprocessor.preprocess_for_user_input(user_input, 'data/processed/mapped_average_values_ronik.csv')
    
 
     # Paths to all the students' models
