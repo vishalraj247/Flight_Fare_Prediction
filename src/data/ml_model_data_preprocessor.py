@@ -201,10 +201,11 @@ class PreProcessor:
             self.user_df = self.map_categorical_features(self.user_df)
             average_values = pd.read_csv(average_values_path)
             self.user_df = self.user_df.merge(average_values, on=['startingAirport', 'destinationAirport'], how='left')
-            self.user_df = self.user_df[['startingAirport', 'destinationAirport', 'totalTravelDistance', 'segmentsDurationInSeconds',
-                                            'segmentsDistance', 'segmentsCabinCode', 'year', 'month', 'day',
-                                            'hour', 'minute']]
-            model_xgb = joblib.load("models/best_model/best-model-aibarna/best_model_aibarna_final.pb")
+            self.user_df = self.user_df[['startingAirport', 'destinationAirport',
+                                            'segmentsCabinCode', 'year', 'month', 'day',
+                                            'hour', 'minute',
+                                           ]]
+            model_xgb = joblib.load("models/best_model_aibarna/best_model_aibarna_final.pb")
             prediction = model_xgb.predict(self.user_df)
 
             return np.array(prediction)
