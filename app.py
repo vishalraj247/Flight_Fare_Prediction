@@ -49,11 +49,14 @@ if st.button("Predict"):
 
     ml_preprocessor = PreProcessor()
     prediction_ronik = ml_preprocessor.preprocess_for_user_input(user_input, 'data/processed/mapped_average_values_ronik.csv')
+    prediction_aibarna = ml_preprocessor.preprocess_for_user_input(user_input, 'data/processed/mapped_average_values_ronik.csv')
 
     # Paths to all the students' models
     model_student_mapping = {
         "models/best_model-vishal_raj": "Vishal Raj's Model",
         "models/best_model_Shivatmak": "Shivatmak's Model",
+        "models/best-model-ronik": "Ronik's Model",
+        "models/best_model_aibarna": "Aibarna's Model",
     }
 
     # Loop through each model, predict and display results
@@ -90,5 +93,7 @@ if st.button("Predict"):
         elif "Shivatmak" in model_path:
             predicted_fare1 = model.predict([startingAirport, destinationAirport, segmentsCabinCode, numerical_features])
             st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
-
+        elif "aibarna" in model_path:
+            st.write(f"Prediction from Aibarna's Model: ${prediction_aibarna[0]:.2f}")
+    
     st.write(f"Prediction from Ronik's Model: ${prediction_ronik[0]:.2f}")
