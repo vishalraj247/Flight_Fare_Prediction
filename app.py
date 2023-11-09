@@ -55,8 +55,6 @@ if st.button("Predict"):
     model_student_mapping = {
         "models/best_model-vishal_raj": "Vishal Raj's Model",
         "models/best_model_Shivatmak": "Shivatmak's Model",
-        # "models/best_model/best-model-ronik": "Ronik's Model",
-        # "models/best_model/best_model_aibarna": "Aibarna's Model",
     }
 
     # Loop through each model, predict and display results
@@ -93,7 +91,7 @@ if st.button("Predict"):
         elif "Shivatmak" in model_path:
             predicted_fare1 = model.predict([startingAirport, destinationAirport, segmentsCabinCode, numerical_features])
             st.write(f"Prediction from {student_name}: ${predicted_fare1[0][0]:.2f}")
-        # elif "aibarna" in model_path:
-    st.write(f"Prediction from Aibarna's Random Regressor Model: ${prediction_aibarna[0]:.2f}")
     
     st.write(f"Prediction from Ronik's XGBRegressor Model: ${prediction_ronik[0]:.2f}")
+
+    st.write(f"Prediction from Aibarna's Random Regressor Model: ${prediction_aibarna[0]:.2f}")
