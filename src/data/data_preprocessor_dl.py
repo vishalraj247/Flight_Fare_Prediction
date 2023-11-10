@@ -219,6 +219,10 @@ class DataPreprocessor:
         # Call the method to replace totalFare with modeFare
         self.replace_fare_with_mode()
 
+        # Create the category mappings after merging all datasets
+        self.create_category_mappings()
+        self.save_category_mappings()
+
         # Diagnostic print
         print("Unique values in segmentsCabinCode after split and explode:")
         print(self.data['segmentsCabinCode'].unique())
@@ -415,13 +419,9 @@ class DataPreprocessor:
         
         # Concatenate all dataframes into one
         self.data = pd.concat(data_frames, ignore_index=True)
-        # Take a random 50% sample of the merged dataset for time complexity
-        #time_complexity = 0.05
+        # Take a random 10% sample of the merged dataset for time complexity
+        #time_complexity = 0.1
         #self.data = self.data.sample(frac=time_complexity).reset_index(drop=True)
-
-        # Create the category mappings after merging all datasets
-        self.create_category_mappings()
-        self.save_category_mappings()
 
         # Preprocess the merged dataset using the created mappings
         processed_data = self.preprocess_data()
