@@ -84,9 +84,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Special thanks to the team members who have contributed to this project:
 
-- Vishal Raj: For deep learning model preprocessing and training the Wide and Deep Neural Network.
+- Vishal Raj: For data preprocessing for deep learing models and training the Wide and Deep Neural Network.
 - Shivatmak: For training the LSTM model.
-- Ronik: For preprocessing data and training the XGBRegressor model.
+- Ronik: For data preprocessing for machine learning models and training the XGBRegressor model.
 - Aibarna: For training the Random Forest Regressor model.
 
 We also acknowledge that our successful collaboration overcame the challenges faced while the course of the project.
