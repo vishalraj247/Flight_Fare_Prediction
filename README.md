@@ -1,7 +1,7 @@
 # Flight Fare Prediction
 
 ## Overview
-Flight Fare Prediction is a sophisticated project aimed at providing accurate fare predictions for flights. This project leverages the strengths of various machine learning and deep learning models, including a Wide and Deep Neural Network, LSTM, and XGBRegressor, each offering unique advantages and insights into the fare estimation process.
+Flight Fare Prediction is a sophisticated project aimed at providing accurate fare predictions for flights. This project leverages the strengths of various machine learning and deep learning models, including a Wide and Deep Neural Network, LSTM, XGBRegressor, and Random Forest Regressor each offering unique advantages and insights into the fare estimation process.
 
 ## Project Structure
 ```
