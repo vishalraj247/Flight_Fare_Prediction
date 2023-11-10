@@ -26,6 +26,7 @@ FLIGHT_FARE_PREDICTION/
 │ ├── main_Shivatmak.ipynb # Shivatmak's primary notebook.
 │ ├── main_vishal_raj.ipynb # Vishal Raj's primary notebook.
 │ ├── notebook_ronik_at3.ipynb # Ronik's exploration notebook.
+│ ├── main_aibarna.ipynb # Aibarna's exploration notebook.
 │
 ├── references/ # Data dictionaries, manuals, and all other explanatory materials.
 │
@@ -45,6 +46,7 @@ FLIGHT_FARE_PREDICTION/
 │ │ ├── train_model_ronik.py # Training script for Ronik's model.
 │ │ ├── train_model_Shivatmak.py # Training script for Shivatmak's model.
 │ │ ├── train_model_vishal_raj.py # Training script for Vishal's model.
+│ │ ├── train_model_aibarna.py # Training script for Aibarna's model.
 │ │
 │ ├── visualization/ # Scripts to create exploratory and results oriented visualizations.
 │ ├── init.py
